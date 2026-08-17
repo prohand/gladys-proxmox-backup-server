@@ -21,6 +21,8 @@ PBS API tokens use separate ACL entries by design; `generate-token` does not acc
 
 Each PBS datastore is exposed as one Gladys device with these read-only features:
 
+The three capacity values (`Usage`, `Total size`, and `Used space`) are mapped to the Gladys `data/size` capability while retaining their percent or gigabyte unit.
+
 | Feature                        | Value      | Description                                                                |
 | ------------------------------ | ---------- | -------------------------------------------------------------------------- |
 | Usage                          | Percentage | Used datastore capacity, rounded to two decimal places.                    |
