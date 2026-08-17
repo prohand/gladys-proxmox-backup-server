@@ -6,6 +6,7 @@ import {
 import { newestSnapshotEpoch, ProxmoxClient, taskSummary } from './proxmox.js';
 
 const STALE_AFTER_SECONDS = 26 * 60 * 60;
+export const GLADYS_POLL_FREQUENCY_MS = 60 * 1000;
 const CAT = DEVICE_FEATURE_CATEGORIES;
 const TYPE = DEVICE_FEATURE_TYPES;
 const UNIT = DEVICE_FEATURE_UNITS;
@@ -25,12 +26,17 @@ function feature(ids, key, name, category, type, unit, history = true) {
   };
 }
 
-export function buildDatastoreDevice(gladys, store, config) {
+export function isPollDue(lastPollAt, intervalSeconds, now = Date.now()) {
+  return lastPollAt === undefined || now - lastPollAt >= intervalSeconds * 1000;
+}
+
+export function buildDatastoreDevice(gladys, store) {
   const ids = gladys.externalIds('pbs-datastore', store.store);
   return {
     name: `PBS — ${store.store}`,
     external_id: ids.device,
-    poll_frequency: config.poll_frequency,
+    should_poll: true,
+    poll_frequency: GLADYS_POLL_FREQUENCY_MS,
     features: [
       feature(ids, 'usage', 'Usage', CAT.ENERGY_SENSOR, TYPE.SENSOR.DECIMAL, UNIT.PERCENT),
       feature(ids, 'total', 'Total size', CAT.ENERGY_SENSOR, TYPE.SENSOR.DECIMAL, UNIT.GIGABYTE),
