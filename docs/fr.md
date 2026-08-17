@@ -10,14 +10,14 @@ Sur PBS, exécutez en tant que `root` (remplacez le mot de passe et conservez le
 
 ```bash
 proxmox-backup-manager user create gladys@pbs --password 'UN_MOT_DE_PASSE_LONG_ET_UNIQUE'
-proxmox-backup-manager user generate-token gladys@pbs monitoring --privsep true
+proxmox-backup-manager user generate-token gladys@pbs monitoring
 proxmox-backup-manager acl update /datastore DatastoreAudit --auth-id gladys@pbs --propagate true
 proxmox-backup-manager acl update /datastore DatastoreAudit --auth-id 'gladys@pbs!monitoring' --propagate true
 proxmox-backup-manager acl update /system Audit --auth-id gladys@pbs --propagate true
 proxmox-backup-manager acl update /system Audit --auth-id 'gladys@pbs!monitoring' --propagate true
 ```
 
-La séparation de privilèges est activée : PBS utilise l'intersection des ACL de l'utilisateur et du jeton. Ces quatre ACL identiques sont donc intentionnelles. Pour limiter la supervision à un seul datastore, remplacez `/datastore` par `/datastore/NOM` dans les deux commandes correspondantes. Vérifiez avec :
+La séparation des privilèges des jetons API est native dans PBS : `generate-token` n'accepte pas d'option `--privsep`. PBS utilise l'intersection des ACL de l'utilisateur et du jeton. Ces quatre ACL identiques sont donc intentionnelles. Pour limiter la supervision à un seul datastore, remplacez `/datastore` par `/datastore/NOM` dans les deux commandes correspondantes. Vérifiez avec :
 
 ```bash
 proxmox-backup-manager user permissions 'gladys@pbs!monitoring'
