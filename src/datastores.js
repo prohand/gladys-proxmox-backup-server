@@ -3,13 +3,17 @@ import {
   DEVICE_FEATURE_TYPES,
   DEVICE_FEATURE_UNITS,
 } from '@gladysassistant/integration-sdk';
-import { newestSnapshotEpoch, ProxmoxClient, taskSummary } from './proxmox.js';
+import { newestSnapshotEpoch, ProxmoxClient, taskDetails, taskSummary } from './proxmox.js';
 
 const STALE_AFTER_SECONDS = 26 * 60 * 60;
 export const GLADYS_POLL_FREQUENCY_MS = 60 * 1000;
 const CAT = DEVICE_FEATURE_CATEGORIES;
 const TYPE = DEVICE_FEATURE_TYPES;
 const UNIT = DEVICE_FEATURE_UNITS;
+
+function roundToTwo(value) {
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+}
 
 function feature(ids, key, name, category, type, unit, history = true) {
   return {
@@ -53,13 +57,39 @@ export function buildDatastoreDevice(gladys, store) {
       feature(
         ids,
         'last-gc',
-        'Last garbage collection',
+        'Last garbage collection status',
         CAT.TEXT,
         TYPE.TEXT.TEXT,
         UNIT.UNKNOWN,
         false,
       ),
-      feature(ids, 'last-prune', 'Last prune', CAT.TEXT, TYPE.TEXT.TEXT, UNIT.UNKNOWN, false),
+      feature(
+        ids,
+        'last-gc-date',
+        'Last garbage collection date',
+        CAT.TEXT,
+        TYPE.TEXT.TEXT,
+        UNIT.UNKNOWN,
+        false,
+      ),
+      feature(
+        ids,
+        'last-prune',
+        'Last prune status',
+        CAT.TEXT,
+        TYPE.TEXT.TEXT,
+        UNIT.UNKNOWN,
+        false,
+      ),
+      feature(
+        ids,
+        'last-prune-date',
+        'Last prune date',
+        CAT.TEXT,
+        TYPE.TEXT.TEXT,
+        UNIT.UNKNOWN,
+        false,
+      ),
       {
         ...feature(
           ids,
@@ -79,17 +109,27 @@ export function buildDatastoreStates(gladys, store, snapshots, tasks, now = Date
   const ids = gladys.externalIds('pbs-datastore', store.store);
   const latest = newestSnapshotEpoch(snapshots);
   const stale = !latest || now / 1000 - latest > STALE_AFTER_SECONDS;
+  const garbageCollection = taskDetails(tasks, 'gc');
+  const prune = taskDetails(tasks, 'prune');
   return [
     {
       device_feature_external_id: ids.feature('usage'),
-      state: store.total ? (Number(store.used) / Number(store.total)) * 100 : 0,
+      state: store.total ? roundToTwo((Number(store.used) / Number(store.total)) * 100) : 0,
     },
-    { device_feature_external_id: ids.feature('total'), state: Number(store.total) / 1e9 },
-    { device_feature_external_id: ids.feature('used'), state: Number(store.used) / 1e9 },
+    {
+      device_feature_external_id: ids.feature('total'),
+      state: roundToTwo(Number(store.total) / 1e9),
+    },
+    {
+      device_feature_external_id: ids.feature('used'),
+      state: roundToTwo(Number(store.used) / 1e9),
+    },
     { device_feature_external_id: ids.feature('snapshots'), state: snapshots.length },
     { device_feature_external_id: ids.feature('last-verify'), text: taskSummary(tasks, 'verify') },
-    { device_feature_external_id: ids.feature('last-gc'), text: taskSummary(tasks, 'gc') },
-    { device_feature_external_id: ids.feature('last-prune'), text: taskSummary(tasks, 'prune') },
+    { device_feature_external_id: ids.feature('last-gc'), text: garbageCollection.status },
+    { device_feature_external_id: ids.feature('last-gc-date'), text: garbageCollection.date },
+    { device_feature_external_id: ids.feature('last-prune'), text: prune.status },
+    { device_feature_external_id: ids.feature('last-prune-date'), text: prune.date },
     { device_feature_external_id: ids.feature('backup-stale'), state: stale ? 1 : 0 },
   ];
 }
