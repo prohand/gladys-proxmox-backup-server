@@ -10,7 +10,7 @@ test('manifest describes a read-only device integration', async () => {
   assert.equal(manifest.type, 'device');
   assert.ok(
     manifest.config_schema.some(
-      ({ key, type }) => key === 'api_token_secret' && type === 'password',
+      ({ key, type }) => key === 'api_token_secret' && type === 'secret',
     ),
   );
 });
