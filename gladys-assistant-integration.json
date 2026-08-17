@@ -55,7 +55,7 @@
     },
     {
       "key": "api_token_secret",
-      "type": "password",
+      "type": "secret",
       "label": { "en": "API token secret", "fr": "Secret du jeton API" },
       "required": true
     },
