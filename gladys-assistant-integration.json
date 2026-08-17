@@ -74,9 +74,9 @@
         "fr": "Intervalle de rafraîchissement (secondes)"
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": 900,
+      "min": 300,
+      "max": 86400
     },
     {
       "key": "verify_tls",
