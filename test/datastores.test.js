@@ -23,6 +23,9 @@ test('datastore devices use the valid Gladys one-minute polling frequency', () =
   const snapshotCount = device.features.find((feature) =>
     feature.external_id.endsWith(':snapshots'),
   );
+  const capacityFeatures = ['usage', 'total', 'used'].map((key) =>
+    device.features.find((feature) => feature.external_id.endsWith(`:${key}`)),
+  );
   const backupStale = device.features.find((feature) =>
     feature.external_id.endsWith(':backup-stale'),
   );
@@ -33,6 +36,14 @@ test('datastore devices use the valid Gladys one-minute polling frequency', () =
   assert.deepEqual(
     { category: backupStale.category, type: backupStale.type },
     { category: 'risk', type: 'integer' },
+  );
+  assert.deepEqual(
+    capacityFeatures.map(({ category, type, unit }) => ({ category, type, unit })),
+    [
+      { category: 'data', type: 'size', unit: 'percent' },
+      { category: 'data', type: 'size', unit: 'gigabyte' },
+      { category: 'data', type: 'size', unit: 'gigabyte' },
+    ],
   );
   assert.ok(device.features.some((feature) => feature.external_id.endsWith(':last-gc-date')));
   assert.ok(device.features.some((feature) => feature.external_id.endsWith(':last-prune-date')));
