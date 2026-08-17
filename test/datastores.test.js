@@ -34,6 +34,8 @@ test('datastore devices use the valid Gladys one-minute polling frequency', () =
     { category: backupStale.category, type: backupStale.type },
     { category: 'risk', type: 'integer' },
   );
+  assert.ok(device.features.some((feature) => feature.external_id.endsWith(':last-gc-date')));
+  assert.ok(device.features.some((feature) => feature.external_id.endsWith(':last-prune-date')));
 });
 
 test('custom polling interval throttles Gladys one-minute poll events', () => {
@@ -42,23 +44,26 @@ test('custom polling interval throttles Gladys one-minute poll events', () => {
   assert.equal(isPollDue(1_000, 300, 301_000), true);
 });
 
-test('datastore states use the text field for maintenance summaries', () => {
+test('datastore states split task statuses and dates and round capacity values', () => {
   const states = buildDatastoreStates(
     gladys,
-    { store: 'backup', total: 100, used: 25 },
+    { store: 'backup', total: 2875.829006336e9, used: 1854.120583168e9 },
     [],
-    [],
+    [
+      { worker_type: 'garbage_collection', status: 'OK', endtime: 20 },
+      { worker_type: 'prune', status: 'OK', endtime: 30 },
+    ],
     1_000,
   );
-  for (const key of ['last-verify', 'last-gc', 'last-prune']) {
-    assert.deepEqual(
-      states.find((state) => state.device_feature_external_id.endsWith(`:${key}`)),
-      {
-        device_feature_external_id: `ext:test:pbs-datastore:backup:${key}`,
-        text: 'Never run',
-      },
-    );
-  }
+  const state = (key) => states.find((item) => item.device_feature_external_id.endsWith(`:${key}`));
+  assert.equal(state('usage').state, 64.47);
+  assert.equal(state('total').state, 2875.83);
+  assert.equal(state('used').state, 1854.12);
+  assert.equal(state('last-verify').text, 'Never run');
+  assert.equal(state('last-gc').text, 'OK');
+  assert.equal(state('last-gc-date').text, '1970-01-01T00:00:20.000Z');
+  assert.equal(state('last-prune').text, 'OK');
+  assert.equal(state('last-prune-date').text, '1970-01-01T00:00:30.000Z');
   assert.equal(
     states.find((state) => state.device_feature_external_id.endsWith(':backup-stale')).state,
     1,
