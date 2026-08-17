@@ -3,7 +3,7 @@ import {
   DEVICE_FEATURE_TYPES,
   DEVICE_FEATURE_UNITS,
 } from '@gladysassistant/integration-sdk';
-import { newestSnapshotEpoch, ProxmoxClient, taskDetails, taskSummary } from './proxmox.js';
+import { newestSnapshotEpoch, ProxmoxClient, taskDetails } from './proxmox.js';
 
 const STALE_AFTER_SECONDS = 26 * 60 * 60;
 export const GLADYS_POLL_FREQUENCY_MS = 60 * 1000;
@@ -53,7 +53,24 @@ export function buildDatastoreDevice(gladys, store) {
         TYPE.SENSOR.INTEGER,
         UNIT.UNKNOWN,
       ),
-      feature(ids, 'last-verify', 'Last verify', CAT.TEXT, TYPE.TEXT.TEXT, UNIT.UNKNOWN, false),
+      feature(
+        ids,
+        'last-verify',
+        'Last verify status',
+        CAT.TEXT,
+        TYPE.TEXT.TEXT,
+        UNIT.UNKNOWN,
+        false,
+      ),
+      feature(
+        ids,
+        'last-verify-date',
+        'Last verify date',
+        CAT.TEXT,
+        TYPE.TEXT.TEXT,
+        UNIT.UNKNOWN,
+        false,
+      ),
       feature(
         ids,
         'last-gc',
@@ -109,6 +126,7 @@ export function buildDatastoreStates(gladys, store, snapshots, tasks, now = Date
   const ids = gladys.externalIds('pbs-datastore', store.store);
   const latest = newestSnapshotEpoch(snapshots);
   const stale = !latest || now / 1000 - latest > STALE_AFTER_SECONDS;
+  const verify = taskDetails(tasks, 'verify');
   const garbageCollection = taskDetails(tasks, 'gc');
   const prune = taskDetails(tasks, 'prune');
   return [
@@ -125,7 +143,8 @@ export function buildDatastoreStates(gladys, store, snapshots, tasks, now = Date
       state: roundToTwo(Number(store.used) / 1e9),
     },
     { device_feature_external_id: ids.feature('snapshots'), state: snapshots.length },
-    { device_feature_external_id: ids.feature('last-verify'), text: taskSummary(tasks, 'verify') },
+    { device_feature_external_id: ids.feature('last-verify'), text: verify.status },
+    { device_feature_external_id: ids.feature('last-verify-date'), text: verify.date },
     { device_feature_external_id: ids.feature('last-gc'), text: garbageCollection.status },
     { device_feature_external_id: ids.feature('last-gc-date'), text: garbageCollection.date },
     { device_feature_external_id: ids.feature('last-prune'), text: prune.status },
