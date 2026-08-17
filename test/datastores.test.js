@@ -47,6 +47,7 @@ test('datastore devices use the valid Gladys one-minute polling frequency', () =
   );
   assert.ok(device.features.some((feature) => feature.external_id.endsWith(':last-gc-date')));
   assert.ok(device.features.some((feature) => feature.external_id.endsWith(':last-prune-date')));
+  assert.ok(device.features.some((feature) => feature.external_id.endsWith(':last-verify-date')));
 });
 
 test('custom polling interval throttles Gladys one-minute poll events', () => {
@@ -61,6 +62,7 @@ test('datastore states split task statuses and dates and round capacity values',
     { store: 'backup', total: 2875.829006336e9, used: 1854.120583168e9 },
     [],
     [
+      { worker_type: 'verificationjob', status: 'OK', endtime: 10 },
       { worker_type: 'garbage_collection', status: 'OK', endtime: 20 },
       { worker_type: 'prune', status: 'OK', endtime: 30 },
     ],
@@ -70,7 +72,8 @@ test('datastore states split task statuses and dates and round capacity values',
   assert.equal(state('usage').state, 64.47);
   assert.equal(state('total').state, 2875.83);
   assert.equal(state('used').state, 1854.12);
-  assert.equal(state('last-verify').text, 'Never run');
+  assert.equal(state('last-verify').text, 'OK');
+  assert.equal(state('last-verify-date').text, '1970-01-01T00:00:10.000Z');
   assert.equal(state('last-gc').text, 'OK');
   assert.equal(state('last-gc-date').text, '1970-01-01T00:00:20.000Z');
   assert.equal(state('last-prune').text, 'OK');
