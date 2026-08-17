@@ -46,7 +46,8 @@ Les trois valeurs de capacité (`Usage`, `Total size` et `Used space`) sont ratt
 | Total size                     | Gigaoctets  | Capacité totale du datastore, arrondie à deux décimales.                            |
 | Used space                     | Gigaoctets  | Espace utilisé, arrondi à deux décimales.                                           |
 | Snapshot count                 | Entier      | Nombre de snapshots actuellement stockés.                                           |
-| Last verify                    | Texte       | Dernier statut de vérification avec sa date ISO 8601, ou `Never run`.               |
+| Last verify status             | Texte       | Dernier statut de vérification, par exemple `OK`.                                   |
+| Last verify date               | Texte       | Date de la dernière vérification au format ISO 8601.                                |
 | Last garbage collection status | Texte       | Dernier statut du garbage collection, par exemple `OK`.                             |
 | Last garbage collection date   | Texte       | Date du dernier garbage collection au format ISO 8601.                              |
 | Last prune status              | Texte       | Dernier statut du prune, par exemple `OK`.                                          |
