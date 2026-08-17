@@ -4,12 +4,13 @@ External Gladys Assistant integration for **read-only monitoring** of Proxmox Ba
 
 ## Monitored values
 
-- datastore usage percentage, total size, and used space;
+- datastore usage percentage, total size, and used space, rounded to two decimal places;
 - snapshot count per datastore;
-- last verify, garbage collection, and prune task status and timestamp;
+- last verify status and timestamp;
+- separate status and timestamp features for the last garbage collection and prune tasks;
 - binary `Backup stale` sensor, set to `1` when no snapshot exists or the newest snapshot is older than **26 hours**.
 
-See [the English setup guide](docs/en.md) or [le guide en français](docs/fr.md), especially the exact least-privilege ACL commands.
+See [the English setup guide](docs/en.md) or [le guide en français](docs/fr.md) for the complete feature reference and the exact least-privilege ACL commands.
 
 ## Development
 
