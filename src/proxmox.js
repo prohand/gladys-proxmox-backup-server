@@ -61,7 +61,7 @@ export class ProxmoxClient {
   }
 }
 
-export function taskSummary(tasks, type) {
+export function taskDetails(tasks, type) {
   const aliases = {
     verify: ['verify', 'verifyjob', 'verifysnapshot'],
     gc: ['garbage_collection', 'garbage-collection', 'gc'],
@@ -74,10 +74,15 @@ export function taskSummary(tasks, type) {
     .sort(
       (a, b) => Number(b.endtime ?? b.starttime ?? 0) - Number(a.endtime ?? a.starttime ?? 0),
     )[0];
-  if (!task) return 'Never run';
+  if (!task) return { status: 'Never run', date: 'Never run' };
   const status = task.status ?? (task.endtime ? 'OK' : 'running');
-  const time = new Date(Number(task.endtime ?? task.starttime) * 1000).toISOString();
-  return `${status} — ${time}`;
+  const date = new Date(Number(task.endtime ?? task.starttime) * 1000).toISOString();
+  return { status, date };
+}
+
+export function taskSummary(tasks, type) {
+  const details = taskDetails(tasks, type);
+  return details.date === 'Never run' ? details.status : `${details.status} — ${details.date}`;
 }
 
 export function newestSnapshotEpoch(snapshots) {
