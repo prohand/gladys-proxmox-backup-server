@@ -20,10 +20,12 @@ test('manifest describes a read-only device integration', async () => {
     },
     { default: 900, min: 300, max: 86_400 },
   );
-  assert.ok(
-    manifest.config_schema.some(
-      ({ key, type, default: defaultValue }) =>
-        key === 'date_format' && type === 'string' && defaultValue === 'iso',
-    ),
+  const dateFormat = manifest.config_schema.find(({ key }) => key === 'date_format');
+  assert.equal(dateFormat.type, 'select');
+  assert.equal(dateFormat.display, 'dropdown');
+  assert.equal(dateFormat.default, 'iso');
+  assert.deepEqual(
+    dateFormat.options.map(({ value }) => value),
+    ['iso', 'DD/MM/YYYY HH:mm:ss', 'YYYY-MM-DD HH:mm:ss', 'MM/DD/YYYY HH:mm:ss'],
   );
 });

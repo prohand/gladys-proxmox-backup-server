@@ -19,7 +19,7 @@ PBS API tokens use separate ACL entries by design; `generate-token` does not acc
 
 The refresh interval defaults to 15 minutes. It cannot be set below 5 minutes to limit growth of the Gladys database, and it can be increased up to 24 hours.
 
-The general `Date format` setting controls all task dates. Keep `iso` for ISO 8601, or enter a pattern using `YYYY`, `MM`, `DD`, `HH`, `mm`, and `ss`, for example `DD/MM/YYYY HH:mm:ss`. Dates are formatted in UTC.
+The general `Date format` dropdown controls all task dates. It offers ISO 8601, day/month/year, year-month-day, and month/day/year formats. Dates are formatted in UTC.
 
 ## Exposed features
 

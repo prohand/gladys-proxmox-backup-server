@@ -87,12 +87,43 @@
     },
     {
       "key": "date_format",
-      "type": "string",
+      "type": "select",
       "label": { "en": "Date format", "fr": "Format de date" },
       "description": {
-        "en": "Use iso or a pattern with YYYY, MM, DD, HH, mm and ss. Dates are displayed in UTC.",
-        "fr": "Utilisez iso ou un modèle avec YYYY, MM, DD, HH, mm et ss. Les dates sont affichées en UTC."
+        "en": "Select how task dates are displayed. Dates are displayed in UTC.",
+        "fr": "Sélectionnez le format d'affichage des dates des tâches. Les dates sont affichées en UTC."
       },
+      "display": "dropdown",
+      "options": [
+        {
+          "value": "iso",
+          "label": {
+            "en": "ISO 8601 — 2026-08-17T18:30:00.000Z",
+            "fr": "ISO 8601 — 2026-08-17T18:30:00.000Z"
+          }
+        },
+        {
+          "value": "DD/MM/YYYY HH:mm:ss",
+          "label": {
+            "en": "Day/month/year — 17/08/2026 18:30:00",
+            "fr": "Jour/mois/année — 17/08/2026 18:30:00"
+          }
+        },
+        {
+          "value": "YYYY-MM-DD HH:mm:ss",
+          "label": {
+            "en": "Year-month-day — 2026-08-17 18:30:00",
+            "fr": "Année-mois-jour — 2026-08-17 18:30:00"
+          }
+        },
+        {
+          "value": "MM/DD/YYYY HH:mm:ss",
+          "label": {
+            "en": "Month/day/year — 08/17/2026 18:30:00",
+            "fr": "Mois/jour/année — 08/17/2026 18:30:00"
+          }
+        }
+      ],
       "required": false,
       "default": "iso"
     }
