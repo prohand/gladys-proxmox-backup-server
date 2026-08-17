@@ -11,4 +11,13 @@ test('manifest describes a read-only device integration', async () => {
   assert.ok(
     manifest.config_schema.some(({ key, type }) => key === 'api_token_secret' && type === 'secret'),
   );
+  const refreshInterval = manifest.config_schema.find(({ key }) => key === 'poll_frequency');
+  assert.deepEqual(
+    {
+      default: refreshInterval.default,
+      min: refreshInterval.min,
+      max: refreshInterval.max,
+    },
+    { default: 900, min: 300, max: 86_400 },
+  );
 });
