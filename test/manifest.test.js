@@ -12,4 +12,3 @@ test('manifest describes a read-only device integration', async () => {
     manifest.config_schema.some(({ key, type }) => key === 'api_token_secret' && type === 'secret'),
   );
 });
-
