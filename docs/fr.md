@@ -31,6 +31,7 @@ proxmox-backup-manager user permissions 'gladys@pbs!monitoring'
 4. Nœud : généralement `localhost`; indiquez le nom retourné par PBS si nécessaire.
 5. Gardez la vérification TLS activée. Ne la désactivez que pour un certificat autosigné sur un réseau de confiance.
 6. L'intervalle de rafraîchissement est de 15 minutes par défaut. Il ne peut pas être inférieur à 5 minutes afin de limiter la croissance de la base Gladys, et peut être augmenté jusqu'à 24 heures.
+7. Le paramètre général `Format de date` s'applique à toutes les dates des tâches. Conservez `iso` pour le format ISO 8601, ou saisissez un modèle utilisant `YYYY`, `MM`, `DD`, `HH`, `mm` et `ss`, par exemple `DD/MM/YYYY HH:mm:ss`. Les dates sont formatées en UTC.
 
 Le jeton est envoyé avec l'en-tête natif `Authorization: PBSAPIToken=...`; aucun mot de passe n'est envoyé à chaque requête.
 

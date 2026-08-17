@@ -61,7 +61,22 @@ export class ProxmoxClient {
   }
 }
 
-export function taskDetails(tasks, type) {
+export function formatTaskDate(epoch, format = 'iso') {
+  const date = new Date(Number(epoch) * 1000);
+  if (format.toLowerCase() === 'iso') return date.toISOString();
+  const pad = (value) => String(value).padStart(2, '0');
+  const tokens = {
+    YYYY: date.getUTCFullYear(),
+    MM: pad(date.getUTCMonth() + 1),
+    DD: pad(date.getUTCDate()),
+    HH: pad(date.getUTCHours()),
+    mm: pad(date.getUTCMinutes()),
+    ss: pad(date.getUTCSeconds()),
+  };
+  return format.replace(/YYYY|MM|DD|HH|mm|ss/g, (token) => tokens[token]);
+}
+
+export function taskDetails(tasks, type, dateFormat = 'iso') {
   const aliases = {
     verify: [
       'verify',
@@ -86,12 +101,12 @@ export function taskDetails(tasks, type) {
     )[0];
   if (!task) return { status: 'Never run', date: 'Never run' };
   const status = task.status ?? (task.endtime ? 'OK' : 'running');
-  const date = new Date(Number(task.endtime ?? task.starttime) * 1000).toISOString();
+  const date = formatTaskDate(task.endtime ?? task.starttime, dateFormat);
   return { status, date };
 }
 
-export function taskSummary(tasks, type) {
-  const details = taskDetails(tasks, type);
+export function taskSummary(tasks, type, dateFormat = 'iso') {
+  const details = taskDetails(tasks, type, dateFormat);
   return details.date === 'Never run' ? details.status : `${details.status} — ${details.date}`;
 }
 

@@ -1,6 +1,11 @@
 export const MIN_POLL_FREQUENCY_SECONDS = 300;
 export const MAX_POLL_FREQUENCY_SECONDS = 86_400;
-export const DEFAULT_CONFIG = { node: 'localhost', poll_frequency: 900, verify_tls: true };
+export const DEFAULT_CONFIG = {
+  node: 'localhost',
+  poll_frequency: 900,
+  verify_tls: true,
+  date_format: 'iso',
+};
 
 function normalizePollFrequency(value) {
   const parsed = Number(value);
@@ -21,5 +26,6 @@ export function normalizeConfig(raw = {}) {
     node: String(raw.node ?? DEFAULT_CONFIG.node),
     poll_frequency: normalizePollFrequency(raw.poll_frequency ?? DEFAULT_CONFIG.poll_frequency),
     verify_tls: raw.verify_tls !== false,
+    date_format: String(raw.date_format ?? DEFAULT_CONFIG.date_format).trim() || 'iso',
   };
 }

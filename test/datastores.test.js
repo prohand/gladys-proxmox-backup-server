@@ -67,17 +67,18 @@ test('datastore states split task statuses and dates and round capacity values',
       { worker_type: 'prune', status: 'OK', endtime: 30 },
     ],
     1_000,
+    'DD/MM/YYYY HH:mm:ss',
   );
   const state = (key) => states.find((item) => item.device_feature_external_id.endsWith(`:${key}`));
   assert.equal(state('usage').state, 64.47);
   assert.equal(state('total').state, 2875.83);
   assert.equal(state('used').state, 1854.12);
   assert.equal(state('last-verify').text, 'OK');
-  assert.equal(state('last-verify-date').text, '1970-01-01T00:00:10.000Z');
+  assert.equal(state('last-verify-date').text, '01/01/1970 00:00:10');
   assert.equal(state('last-gc').text, 'OK');
-  assert.equal(state('last-gc-date').text, '1970-01-01T00:00:20.000Z');
+  assert.equal(state('last-gc-date').text, '01/01/1970 00:00:20');
   assert.equal(state('last-prune').text, 'OK');
-  assert.equal(state('last-prune-date').text, '1970-01-01T00:00:30.000Z');
+  assert.equal(state('last-prune-date').text, '01/01/1970 00:00:30');
   assert.equal(
     states.find((state) => state.device_feature_external_id.endsWith(':backup-stale')).state,
     1,

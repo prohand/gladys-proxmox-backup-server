@@ -14,6 +14,7 @@ test('normalizes URL and form values', () => {
       node: 'localhost',
       poll_frequency: MIN_POLL_FREQUENCY_SECONDS,
       verify_tls: false,
+      date_format: 'iso',
       base_url: 'https://pbs:8007',
       api_token_id: '',
       api_token_secret: '',
@@ -29,4 +30,12 @@ test('keeps the refresh interval within database-safe limits', () => {
     normalizeConfig({ poll_frequency: 100_000 }).poll_frequency,
     MAX_POLL_FREQUENCY_SECONDS,
   );
+});
+
+test('normalizes the configured date format', () => {
+  assert.equal(
+    normalizeConfig({ date_format: ' DD/MM/YYYY HH:mm:ss ' }).date_format,
+    'DD/MM/YYYY HH:mm:ss',
+  );
+  assert.equal(normalizeConfig({ date_format: ' ' }).date_format, 'iso');
 });

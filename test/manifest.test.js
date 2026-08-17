@@ -20,4 +20,10 @@ test('manifest describes a read-only device integration', async () => {
     },
     { default: 900, min: 300, max: 86_400 },
   );
+  assert.ok(
+    manifest.config_schema.some(
+      ({ key, type, default: defaultValue }) =>
+        key === 'date_format' && type === 'string' && defaultValue === 'iso',
+    ),
+  );
 });

@@ -122,13 +122,20 @@ export function buildDatastoreDevice(gladys, store) {
   };
 }
 
-export function buildDatastoreStates(gladys, store, snapshots, tasks, now = Date.now()) {
+export function buildDatastoreStates(
+  gladys,
+  store,
+  snapshots,
+  tasks,
+  now = Date.now(),
+  dateFormat = 'iso',
+) {
   const ids = gladys.externalIds('pbs-datastore', store.store);
   const latest = newestSnapshotEpoch(snapshots);
   const stale = !latest || now / 1000 - latest > STALE_AFTER_SECONDS;
-  const verify = taskDetails(tasks, 'verify');
-  const garbageCollection = taskDetails(tasks, 'gc');
-  const prune = taskDetails(tasks, 'prune');
+  const verify = taskDetails(tasks, 'verify', dateFormat);
+  const garbageCollection = taskDetails(tasks, 'gc', dateFormat);
+  const prune = taskDetails(tasks, 'prune', dateFormat);
   return [
     {
       device_feature_external_id: ids.feature('usage'),
@@ -162,5 +169,5 @@ export async function readDatastore(gladys, storeName, config, now = Date.now())
   ]);
   const store = stores.find((item) => item.store === storeName);
   if (!store) throw new Error(`Datastore ${storeName} no longer exists`);
-  return buildDatastoreStates(gladys, store, snapshots, tasks, now);
+  return buildDatastoreStates(gladys, store, snapshots, tasks, now, config.date_format);
 }

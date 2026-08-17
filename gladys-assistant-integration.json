@@ -84,6 +84,17 @@
       "label": { "en": "Verify TLS certificate", "fr": "Vérifier le certificat TLS" },
       "required": false,
       "default": true
+    },
+    {
+      "key": "date_format",
+      "type": "string",
+      "label": { "en": "Date format", "fr": "Format de date" },
+      "description": {
+        "en": "Use iso or a pattern with YYYY, MM, DD, HH, mm and ss. Dates are displayed in UTC.",
+        "fr": "Utilisez iso ou un modèle avec YYYY, MM, DD, HH, mm et ss. Les dates sont affichées en UTC."
+      },
+      "required": false,
+      "default": "iso"
     }
   ],
   "actions": [
