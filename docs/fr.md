@@ -32,3 +32,20 @@ proxmox-backup-manager user permissions 'gladys@pbs!monitoring'
 5. Gardez la vérification TLS activée. Ne la désactivez que pour un certificat autosigné sur un réseau de confiance.
 
 Le jeton est envoyé avec l'en-tête natif `Authorization: PBSAPIToken=...`; aucun mot de passe n'est envoyé à chaque requête.
+
+## Fonctionnalités exposées
+
+Chaque datastore PBS est représenté par un appareil Gladys comportant les fonctionnalités en lecture seule suivantes :
+
+| Fonctionnalité                 | Valeur      | Description                                                                         |
+| ------------------------------ | ----------- | ----------------------------------------------------------------------------------- |
+| Usage                          | Pourcentage | Espace utilisé, arrondi à deux décimales.                                           |
+| Total size                     | Gigaoctets  | Capacité totale du datastore, arrondie à deux décimales.                            |
+| Used space                     | Gigaoctets  | Espace utilisé, arrondi à deux décimales.                                           |
+| Snapshot count                 | Entier      | Nombre de snapshots actuellement stockés.                                           |
+| Last verify                    | Texte       | Dernier statut de vérification avec sa date ISO 8601, ou `Never run`.               |
+| Last garbage collection status | Texte       | Dernier statut du garbage collection, par exemple `OK`.                             |
+| Last garbage collection date   | Texte       | Date du dernier garbage collection au format ISO 8601.                              |
+| Last prune status              | Texte       | Dernier statut du prune, par exemple `OK`.                                          |
+| Last prune date                | Texte       | Date du dernier prune au format ISO 8601.                                           |
+| Backup stale (> 26 h)          | `0` ou `1`  | `1` lorsqu'aucun snapshot n'existe ou que le plus récent date de plus de 26 heures. |
