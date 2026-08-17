@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { newestSnapshotEpoch, taskSummary } from '../src/proxmox.js';
+import { newestSnapshotEpoch, taskDetails, taskSummary } from '../src/proxmox.js';
 
 test('newestSnapshotEpoch accepts PBS backup-time fields', () => {
   assert.equal(newestSnapshotEpoch([{ 'backup-time': 10 }, { 'backup-time': 42 }]), 42);
@@ -15,4 +15,9 @@ test('taskSummary selects the newest matching task', () => {
   ];
   assert.equal(taskSummary(tasks, 'verify'), 'OK — 1970-01-01T00:00:20.000Z');
   assert.equal(taskSummary(tasks, 'gc'), 'Never run');
+  assert.deepEqual(taskDetails(tasks, 'prune'), {
+    status: 'OK',
+    date: '1970-01-01T00:00:30.000Z',
+  });
+  assert.deepEqual(taskDetails(tasks, 'gc'), { status: 'Never run', date: 'Never run' });
 });
