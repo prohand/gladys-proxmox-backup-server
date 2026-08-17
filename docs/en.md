@@ -31,7 +31,8 @@ The three capacity values (`Usage`, `Total size`, and `Used space`) are mapped t
 | Total size                     | Gigabytes  | Total datastore capacity, rounded to two decimal places.                   |
 | Used space                     | Gigabytes  | Used datastore capacity, rounded to two decimal places.                    |
 | Snapshot count                 | Integer    | Number of snapshots currently stored.                                      |
-| Last verify                    | Text       | Latest verification status and ISO 8601 date, or `Never run`.              |
+| Last verify status             | Text       | Latest verification status, for example `OK`.                              |
+| Last verify date               | Text       | Latest verification date in ISO 8601 format.                               |
 | Last garbage collection status | Text       | Latest garbage collection status, for example `OK`.                        |
 | Last garbage collection date   | Text       | Latest garbage collection date in ISO 8601 format.                         |
 | Last prune status              | Text       | Latest prune status, for example `OK`.                                     |
