@@ -1,0 +1,96 @@
+{
+  "manifest_version": 1,
+  "type": "device",
+  "name": "Proxmox Backup Server",
+  "description": {
+    "en": "Read-only monitoring of Proxmox Backup Server datastores and maintenance tasks.",
+    "fr": "Supervision en lecture seule des datastores et tâches de maintenance Proxmox Backup Server."
+  },
+  "version": "1.0.0",
+  "docker_image": "ghcr.io/gladysassistant/gladys-proxmox-backup-server:1.0.0",
+  "gladys_version": ">=4.86.0",
+  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
+  "categories": ["services", "network"],
+  "config_schema": [
+    {
+      "key": "intro",
+      "type": "section",
+      "label": {
+        "en": "Proxmox Backup Server connection",
+        "fr": "Connexion à Proxmox Backup Server"
+      },
+      "description": {
+        "en": "Create a dedicated API token with the read-only DatastoreAudit and Audit roles. See the documentation for the exact commands.",
+        "fr": "Créez un jeton API dédié avec les rôles de lecture seule DatastoreAudit et Audit. Consultez la documentation pour les commandes exactes."
+      },
+      "links": [
+        {
+          "url": "https://pbs.proxmox.com/docs/user-management.html",
+          "label": {
+            "en": "PBS permissions documentation",
+            "fr": "Documentation des permissions PBS"
+          }
+        }
+      ]
+    },
+    {
+      "key": "base_url",
+      "type": "string",
+      "label": { "en": "Server URL", "fr": "URL du serveur" },
+      "description": {
+        "en": "For example: https://pbs.example.com:8007",
+        "fr": "Par exemple : https://pbs.example.com:8007"
+      },
+      "required": true
+    },
+    {
+      "key": "api_token_id",
+      "type": "string",
+      "label": { "en": "API token ID", "fr": "Identifiant du jeton API" },
+      "description": {
+        "en": "Full ID, for example gladys@pbs!monitoring",
+        "fr": "Identifiant complet, par exemple gladys@pbs!monitoring"
+      },
+      "required": true
+    },
+    {
+      "key": "api_token_secret",
+      "type": "password",
+      "label": { "en": "API token secret", "fr": "Secret du jeton API" },
+      "required": true
+    },
+    {
+      "key": "node",
+      "type": "string",
+      "label": { "en": "PBS node name", "fr": "Nom du nœud PBS" },
+      "required": false,
+      "default": "localhost"
+    },
+    {
+      "key": "poll_frequency",
+      "type": "number",
+      "label": {
+        "en": "Refresh interval (seconds)",
+        "fr": "Intervalle de rafraîchissement (secondes)"
+      },
+      "required": false,
+      "default": 300,
+      "min": 60,
+      "max": 3600
+    },
+    {
+      "key": "verify_tls",
+      "type": "boolean",
+      "label": { "en": "Verify TLS certificate", "fr": "Vérifier le certificat TLS" },
+      "required": false,
+      "default": true
+    }
+  ],
+  "actions": [
+    {
+      "key": "test_connection",
+      "label": { "en": "Test connection", "fr": "Tester la connexion" },
+      "timeout_seconds": 30
+    }
+  ]
+}
