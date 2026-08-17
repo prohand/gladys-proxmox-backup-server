@@ -37,6 +37,8 @@ Le jeton est envoyé avec l'en-tête natif `Authorization: PBSAPIToken=...`; auc
 
 Chaque datastore PBS est représenté par un appareil Gladys comportant les fonctionnalités en lecture seule suivantes :
 
+Les trois valeurs de capacité (`Usage`, `Total size` et `Used space`) sont rattachées à la fonctionnalité Gladys `data/size`, tout en conservant leur unité en pourcentage ou en gigaoctets.
+
 | Fonctionnalité                 | Valeur      | Description                                                                         |
 | ------------------------------ | ----------- | ----------------------------------------------------------------------------------- |
 | Usage                          | Pourcentage | Espace utilisé, arrondi à deux décimales.                                           |
