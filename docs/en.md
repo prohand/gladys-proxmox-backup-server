@@ -17,6 +17,8 @@ proxmox-backup-manager acl update /system Audit --auth-id 'gladys@pbs!monitoring
 
 PBS API tokens use separate ACL entries by design; `generate-token` does not accept a `--privsep` option. Effective token permissions are the intersection of the parent user's permissions and the token's own permissions, hence the matching ACLs. Replace `/datastore` with `/datastore/NAME` in both datastore commands to restrict monitoring to one store. Enter the full token ID and the one-time secret in Gladys. Keep TLS verification enabled unless the server uses a self-signed certificate on a trusted network.
 
+The refresh interval defaults to 15 minutes. It cannot be set below 5 minutes to limit growth of the Gladys database, and it can be increased up to 24 hours.
+
 ## Exposed features
 
 Each PBS datastore is exposed as one Gladys device with these read-only features:
