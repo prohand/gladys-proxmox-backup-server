@@ -9,7 +9,7 @@
   "version": "1.0.0",
   "docker_image": "ghcr.io/gladysassistant/gladys-proxmox-backup-server:1.0.0",
   "gladys_version": ">=4.86.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
+  "cover_image": "https://raw.githubusercontent.com/prohand/gladys-proxmox-backup-server/main/cover.png",
   "categories": ["services", "network"],
   "config_schema": [
     {
