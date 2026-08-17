@@ -63,7 +63,17 @@ export class ProxmoxClient {
 
 export function taskDetails(tasks, type) {
   const aliases = {
-    verify: ['verify', 'verifyjob', 'verifysnapshot'],
+    verify: [
+      'verify',
+      'verify-group',
+      'verify-snapshot',
+      'verify_group',
+      'verify_snapshot',
+      'verification',
+      'verificationjob',
+      'verifyjob',
+      'verifysnapshot',
+    ],
     gc: ['garbage_collection', 'garbage-collection', 'gc'],
     prune: ['prune', 'prunejob'],
   };
