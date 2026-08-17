@@ -6,11 +6,14 @@
     "en": "Read-only monitoring of Proxmox Backup Server datastores and maintenance tasks.",
     "fr": "Supervision en lecture seule des datastores et tâches de maintenance Proxmox Backup Server."
   },
-  "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/gladys-proxmox-backup-server:1.0.0",
+  "version": "1.0.1",
+  "docker_image": "ghcr.io/prohand/gladys-proxmox-backup-server:1.0.1",
   "gladys_version": ">=4.86.0",
   "cover_image": "https://raw.githubusercontent.com/prohand/gladys-proxmox-backup-server/main/cover.png",
-  "categories": ["services", "network"],
+  "categories": [
+    "services",
+    "network"
+  ],
   "config_schema": [
     {
       "key": "intro",
@@ -36,7 +39,10 @@
     {
       "key": "base_url",
       "type": "string",
-      "label": { "en": "Server URL", "fr": "URL du serveur" },
+      "label": {
+        "en": "Server URL",
+        "fr": "URL du serveur"
+      },
       "description": {
         "en": "For example: https://pbs.example.com:8007",
         "fr": "Par exemple : https://pbs.example.com:8007"
@@ -46,7 +52,10 @@
     {
       "key": "api_token_id",
       "type": "string",
-      "label": { "en": "API token ID", "fr": "Identifiant du jeton API" },
+      "label": {
+        "en": "API token ID",
+        "fr": "Identifiant du jeton API"
+      },
       "description": {
         "en": "Full ID, for example gladys@pbs!monitoring",
         "fr": "Identifiant complet, par exemple gladys@pbs!monitoring"
@@ -56,13 +65,19 @@
     {
       "key": "api_token_secret",
       "type": "secret",
-      "label": { "en": "API token secret", "fr": "Secret du jeton API" },
+      "label": {
+        "en": "API token secret",
+        "fr": "Secret du jeton API"
+      },
       "required": true
     },
     {
       "key": "node",
       "type": "string",
-      "label": { "en": "PBS node name", "fr": "Nom du nœud PBS" },
+      "label": {
+        "en": "PBS node name",
+        "fr": "Nom du nœud PBS"
+      },
       "required": false,
       "default": "localhost"
     },
@@ -81,14 +96,20 @@
     {
       "key": "verify_tls",
       "type": "boolean",
-      "label": { "en": "Verify TLS certificate", "fr": "Vérifier le certificat TLS" },
+      "label": {
+        "en": "Verify TLS certificate",
+        "fr": "Vérifier le certificat TLS"
+      },
       "required": false,
       "default": true
     },
     {
       "key": "date_format",
       "type": "select",
-      "label": { "en": "Date format", "fr": "Format de date" },
+      "label": {
+        "en": "Date format",
+        "fr": "Format de date"
+      },
       "description": {
         "en": "Select how task dates are displayed. Dates are displayed in UTC.",
         "fr": "Sélectionnez le format d'affichage des dates des tâches. Les dates sont affichées en UTC."
@@ -131,7 +152,10 @@
   "actions": [
     {
       "key": "test_connection",
-      "label": { "en": "Test connection", "fr": "Tester la connexion" },
+      "label": {
+        "en": "Test connection",
+        "fr": "Tester la connexion"
+      },
       "timeout_seconds": 30
     }
   ]
