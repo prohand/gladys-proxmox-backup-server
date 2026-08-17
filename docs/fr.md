@@ -33,6 +33,8 @@ proxmox-backup-manager user permissions 'gladys@pbs!monitoring'
 6. L'intervalle de rafraîchissement est de 15 minutes par défaut. Il ne peut pas être inférieur à 5 minutes afin de limiter la croissance de la base Gladys, et peut être augmenté jusqu'à 24 heures.
 7. La liste déroulante générale `Format de date` s'applique à toutes les dates des tâches. Elle propose les formats ISO 8601, jour/mois/année, année-mois-jour et mois/jour/année. Les dates sont formatées en UTC.
 
+> Après avoir modifié et sauvegardé le format de date, ouvrez l'appareil PBS concerné dans Gladys et sauvegardez-le de nouveau pour appliquer le changement.
+
 Le jeton est envoyé avec l'en-tête natif `Authorization: PBSAPIToken=...`; aucun mot de passe n'est envoyé à chaque requête.
 
 ## Fonctionnalités exposées

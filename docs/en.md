@@ -21,6 +21,8 @@ The refresh interval defaults to 15 minutes. It cannot be set below 5 minutes to
 
 The general `Date format` dropdown controls all task dates. It offers ISO 8601, day/month/year, year-month-day, and month/day/year formats. Dates are formatted in UTC.
 
+> After changing and saving the date format, open the affected PBS device in Gladys and save it again to apply the change.
+
 ## Exposed features
 
 Each PBS datastore is exposed as one Gladys device with these read-only features:
