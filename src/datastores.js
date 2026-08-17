@@ -42,9 +42,9 @@ export function buildDatastoreDevice(gladys, store) {
     should_poll: true,
     poll_frequency: GLADYS_POLL_FREQUENCY_MS,
     features: [
-      feature(ids, 'usage', 'Usage', CAT.ENERGY_SENSOR, TYPE.SENSOR.DECIMAL, UNIT.PERCENT),
-      feature(ids, 'total', 'Total size', CAT.ENERGY_SENSOR, TYPE.SENSOR.DECIMAL, UNIT.GIGABYTE),
-      feature(ids, 'used', 'Used space', CAT.ENERGY_SENSOR, TYPE.SENSOR.DECIMAL, UNIT.GIGABYTE),
+      feature(ids, 'usage', 'Usage', CAT.DATA, TYPE.DATA.SIZE, UNIT.PERCENT),
+      feature(ids, 'total', 'Total size', CAT.DATA, TYPE.DATA.SIZE, UNIT.GIGABYTE),
+      feature(ids, 'used', 'Used space', CAT.DATA, TYPE.DATA.SIZE, UNIT.GIGABYTE),
       feature(
         ids,
         'snapshots',
