@@ -45,7 +45,7 @@ export function buildDatastoreDevice(gladys, store) {
         ids,
         'snapshots',
         'Snapshot count',
-        CAT.MAINTENANCE,
+        CAT.COUNTER_SENSOR,
         TYPE.SENSOR.INTEGER,
         UNIT.UNKNOWN,
       ),
@@ -65,14 +65,33 @@ export function buildDatastoreDevice(gladys, store) {
           ids,
           'backup-stale',
           'Backup stale (> 26 h)',
-          CAT.MAINTENANCE,
-          'binary',
+          CAT.RISK,
+          TYPE.RISK.INTEGER,
           UNIT.UNKNOWN,
         ),
         max: 1,
       },
     ],
   };
+}
+
+export function buildDatastoreStates(gladys, store, snapshots, tasks, now = Date.now()) {
+  const ids = gladys.externalIds('pbs-datastore', store.store);
+  const latest = newestSnapshotEpoch(snapshots);
+  const stale = !latest || now / 1000 - latest > STALE_AFTER_SECONDS;
+  return [
+    {
+      device_feature_external_id: ids.feature('usage'),
+      state: store.total ? (Number(store.used) / Number(store.total)) * 100 : 0,
+    },
+    { device_feature_external_id: ids.feature('total'), state: Number(store.total) / 1e9 },
+    { device_feature_external_id: ids.feature('used'), state: Number(store.used) / 1e9 },
+    { device_feature_external_id: ids.feature('snapshots'), state: snapshots.length },
+    { device_feature_external_id: ids.feature('last-verify'), text: taskSummary(tasks, 'verify') },
+    { device_feature_external_id: ids.feature('last-gc'), text: taskSummary(tasks, 'gc') },
+    { device_feature_external_id: ids.feature('last-prune'), text: taskSummary(tasks, 'prune') },
+    { device_feature_external_id: ids.feature('backup-stale'), state: stale ? 1 : 0 },
+  ];
 }
 
 export async function readDatastore(gladys, storeName, config, now = Date.now()) {
@@ -84,20 +103,5 @@ export async function readDatastore(gladys, storeName, config, now = Date.now())
   ]);
   const store = stores.find((item) => item.store === storeName);
   if (!store) throw new Error(`Datastore ${storeName} no longer exists`);
-  const ids = gladys.externalIds('pbs-datastore', storeName);
-  const latest = newestSnapshotEpoch(snapshots);
-  const stale = !latest || now / 1000 - latest > STALE_AFTER_SECONDS;
-  return [
-    {
-      device_feature_external_id: ids.feature('usage'),
-      state: store.total ? (Number(store.used) / Number(store.total)) * 100 : 0,
-    },
-    { device_feature_external_id: ids.feature('total'), state: Number(store.total) / 1e9 },
-    { device_feature_external_id: ids.feature('used'), state: Number(store.used) / 1e9 },
-    { device_feature_external_id: ids.feature('snapshots'), state: snapshots.length },
-    { device_feature_external_id: ids.feature('last-verify'), state: taskSummary(tasks, 'verify') },
-    { device_feature_external_id: ids.feature('last-gc'), state: taskSummary(tasks, 'gc') },
-    { device_feature_external_id: ids.feature('last-prune'), state: taskSummary(tasks, 'prune') },
-    { device_feature_external_id: ids.feature('backup-stale'), state: stale ? 1 : 0 },
-  ];
+  return buildDatastoreStates(gladys, store, snapshots, tasks, now);
 }
