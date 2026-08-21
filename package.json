@@ -1,6 +1,6 @@
 {
   "name": "gladys-proxmox-backup-server",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "description": "Read-only Proxmox Backup Server monitoring integration for Gladys Assistant.",
   "type": "module",
