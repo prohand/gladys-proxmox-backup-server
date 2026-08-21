@@ -60,7 +60,7 @@ test('datastore states split task statuses and dates and round capacity values',
   const states = buildDatastoreStates(
     gladys,
     { store: 'backup', total: 2875.829006336e9, used: 1854.120583168e9 },
-    [],
+    { snapshotCount: 12, newestBackupEpoch: 0 },
     [
       { worker_type: 'verificationjob', status: 'OK', endtime: 10 },
       { worker_type: 'garbage_collection', status: 'OK', endtime: 20 },
@@ -73,6 +73,7 @@ test('datastore states split task statuses and dates and round capacity values',
   assert.equal(state('usage').state, 64.47);
   assert.equal(state('total').state, 2875.83);
   assert.equal(state('used').state, 1854.12);
+  assert.equal(state('snapshots').state, 12);
   assert.equal(state('last-verify').text, 'OK');
   assert.equal(state('last-verify-date').text, '01/01/1970 00:00:10');
   assert.equal(state('last-gc').text, 'OK');
@@ -83,4 +84,50 @@ test('datastore states split task statuses and dates and round capacity values',
     states.find((state) => state.device_feature_external_id.endsWith(':backup-stale')).state,
     1,
   );
+});
+
+test('text features carry no numeric range, numeric ones do', () => {
+  const device = buildDatastoreDevice(gladys, { store: 'backup' });
+  const feature = (key) => device.features.find((item) => item.external_id.endsWith(`:${key}`));
+
+  for (const key of ['last-verify', 'last-verify-date', 'last-gc', 'last-gc-date', 'last-prune']) {
+    assert.equal(feature(key).min, undefined);
+    assert.equal(feature(key).max, undefined);
+    assert.equal(feature(key).keep_history, false);
+  }
+  assert.deepEqual({ min: feature('usage').min, max: feature('usage').max }, { min: 0, max: 1e15 });
+  assert.deepEqual(
+    { min: feature('backup-stale').min, max: feature('backup-stale').max },
+    { min: 0, max: 1 },
+  );
+});
+
+test('an offline datastore publishes zeros instead of NaN', () => {
+  const states = buildDatastoreStates(
+    gladys,
+    { store: 'offline' },
+    { snapshotCount: 0, newestBackupEpoch: 0 },
+    [],
+    1_000,
+  );
+  const state = (key) => states.find((item) => item.device_feature_external_id.endsWith(`:${key}`));
+  assert.deepEqual(
+    ['usage', 'total', 'used', 'snapshots'].map((key) => state(key).state),
+    [0, 0, 0, 0],
+  );
+  assert.equal(state('backup-stale').state, 1);
+});
+
+test('a fresh backup clears the stale sensor', () => {
+  const now = 1_000_000_000_000;
+  const states = buildDatastoreStates(
+    gladys,
+    { store: 'backup', total: 1e9, used: 5e8 },
+    { snapshotCount: 3, newestBackupEpoch: now / 1000 - 3600 },
+    [],
+    now,
+  );
+  const state = (key) => states.find((item) => item.device_feature_external_id.endsWith(`:${key}`));
+  assert.equal(state('backup-stale').state, 0);
+  assert.equal(state('usage').state, 50);
 });

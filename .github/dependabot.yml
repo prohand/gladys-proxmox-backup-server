@@ -1,0 +1,35 @@
+# -----------------------------------------------------------------------------
+# Keep the toolchain and the base image current without babysitting them.
+# Grouped updates so a week of patch bumps is one pull request, not five.
+# -----------------------------------------------------------------------------
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dev-tooling:
+        patterns:
+          - '@eslint/*'
+          - eslint
+          - eslint-config-prettier
+          - globals
+          - prettier
+      sdk:
+        patterns:
+          - '@gladysassistant/*'
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns:
+          - '*'

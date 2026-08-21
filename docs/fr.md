@@ -48,11 +48,42 @@ Les trois valeurs de capacité (`Usage`, `Total size` et `Used space`) sont ratt
 | Usage                          | Pourcentage | Espace utilisé, arrondi à deux décimales.                                           |
 | Total size                     | Gigaoctets  | Capacité totale du datastore, arrondie à deux décimales.                            |
 | Used space                     | Gigaoctets  | Espace utilisé, arrondi à deux décimales.                                           |
-| Snapshot count                 | Entier      | Nombre de snapshots actuellement stockés.                                           |
+| Snapshot count                 | Entier      | Nombre de snapshots stockés, cumulé sur les groupes de sauvegarde.                  |
 | Last verify status             | Texte       | Dernier statut de vérification, par exemple `OK`.                                   |
-| Last verify date               | Texte       | Date de la dernière vérification au format ISO 8601.                                |
+| Last verify date               | Texte       | Date de la dernière vérification, au format configuré.                              |
 | Last garbage collection status | Texte       | Dernier statut du garbage collection, par exemple `OK`.                             |
-| Last garbage collection date   | Texte       | Date du dernier garbage collection au format ISO 8601.                              |
+| Last garbage collection date   | Texte       | Date du dernier garbage collection, au format configuré.                            |
 | Last prune status              | Texte       | Dernier statut du prune, par exemple `OK`.                                          |
-| Last prune date                | Texte       | Date du dernier prune au format ISO 8601.                                           |
+| Last prune date                | Texte       | Date du dernier prune, au format configuré.                                         |
 | Backup stale (> 26 h)          | `0` ou `1`  | `1` lorsqu'aucun snapshot n'existe ou que le plus récent date de plus de 26 heures. |
+
+## Détails de fonctionnement
+
+- Le nombre de snapshots et la fraîcheur des sauvegardes sont lus depuis les groupes de sauvegarde du datastore (`backup-count` et `last-backup`) : un datastore contenant des milliers de snapshots ne coûte qu'une petite réponse par rafraîchissement. Si une version de PBS n'expose pas ces compteurs, l'intégration revient à la liste complète des snapshots.
+- L'historique des tâches est lu page par page jusqu'à trouver les dernières tâches de vérification, de garbage collection et de prune (jusqu'à 2000 tâches) : sur un datastore très actif, elles ne disparaissent plus de la fenêtre consultée et ne repassent pas à `Never run`.
+- Un datastore hors ligne ou non monté ne renvoie aucune capacité ; l'intégration publie alors `0` pour l'usage, la taille totale et l'espace utilisé, plutôt qu'une valeur invalide.
+- Un rafraîchissement en échec (erreur réseau, délai dépassé, redémarrage de PBS) est retenté au tick Gladys suivant, sans attendre un intervalle complet. Au démarrage, la connexion est retentée quatre fois avec un délai exponentiel avant que l'intégration ne se déclare déconnectée.
+
+## Vérifier la route d'inventaire utilisée
+
+L'intégration privilégie la route économique `groups` et se rabat sur la liste complète des snapshots ; ce repli est tracé en avertissement dans les logs du conteneur (`Falling back to the snapshot list for datastore ...`, avec l'erreur PBS qui l'a déclenché).
+
+Pour le vérifier sur votre serveur sans rien installer dans Gladys, lancez le diagnostic en lecture seule depuis un clone de ce dépôt :
+
+```bash
+PBS_URL=https://pbs.example.com:8007 \
+PBS_TOKEN_ID='gladys@pbs!monitoring' \
+PBS_TOKEN_SECRET='le-secret-du-jeton' \
+npm run check:pbs
+```
+
+Il affiche, pour chaque datastore, la route réellement utilisée, le temps de réponse de chaque route et les dernières tâches verify/GC/prune. Il recoupe également le nombre de snapshots et la date du plus récent avec la liste complète des snapshots, et se termine avec le code `1` en cas de divergence. Ajoutez `PBS_NODE=...` pour un nœud autre que `localhost`, et `PBS_VERIFY_TLS=false` pour un certificat autosigné.
+
+Les mêmes routes se vérifient à la main :
+
+```bash
+curl -sSf -H "Authorization: PBSAPIToken=gladys@pbs!monitoring:SECRET" \
+  'https://pbs.example.com:8007/api2/json/admin/datastore/NOM/groups' | head -c 400
+```
+
+Un HTTP 403 signale une ACL sans `Datastore.Audit` sur ce datastore ; un HTTP 404 signifie que cette version de PBS ne sert pas la route et que le repli sur les snapshots est normal.
