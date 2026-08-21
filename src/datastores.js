@@ -18,7 +18,11 @@ function roundToTwo(value) {
   return Math.round((parsed + Number.EPSILON) * 100) / 100;
 }
 
-// `min`/`max` only describe numeric features; text features carry no range.
+// `min`/`max` are NOT NULL in the Gladys device_feature table, and the
+// Discovery screen compares them to decide whether a created device needs an
+// update. A feature published without them can neither be created nor ever
+// stop being reported as changed — so every feature carries the range, even a
+// text one where it means nothing.
 function numericFeature(ids, key, name, category, type, unit, { history = true, max } = {}) {
   return {
     name,
@@ -41,6 +45,8 @@ function textFeature(ids, key, name) {
     category: CAT.TEXT,
     type: TYPE.TEXT.TEXT,
     unit: UNIT.UNKNOWN,
+    min: 0,
+    max: MAX_NUMERIC_STATE,
     read_only: true,
     has_feedback: false,
     keep_history: false,

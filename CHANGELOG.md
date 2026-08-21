@@ -34,7 +34,9 @@ All notable changes to this integration are documented here. The format follows
 
 - A datastore that is offline or unmounted no longer publishes `NaN` for usage, total size,
   and used space.
-- Text features no longer carry the meaningless `min`/`max` numeric range.
+- Text features publish a `min`/`max` range again: Gladys stores those columns as NOT NULL
+  and compares them to detect a structure change, so publishing them empty left the
+  "Update" button of the Discovery screen showing forever on an already-added datastore.
 
 ### Removed
 
