@@ -86,13 +86,18 @@ test('datastore states split task statuses and dates and round capacity values',
   );
 });
 
-test('text features carry no numeric range, numeric ones do', () => {
+test('every feature carries a numeric range, text ones included', () => {
   const device = buildDatastoreDevice(gladys, { store: 'backup' });
   const feature = (key) => device.features.find((item) => item.external_id.endsWith(`:${key}`));
 
+  // Gladys stores min/max as NOT NULL columns and compares them to detect a
+  // structure change: a feature published without them is never in sync.
+  for (const item of device.features) {
+    assert.equal(typeof item.min, 'number');
+    assert.equal(typeof item.max, 'number');
+  }
   for (const key of ['last-verify', 'last-verify-date', 'last-gc', 'last-gc-date', 'last-prune']) {
-    assert.equal(feature(key).min, undefined);
-    assert.equal(feature(key).max, undefined);
+    assert.deepEqual({ min: feature(key).min, max: feature(key).max }, { min: 0, max: 1e15 });
     assert.equal(feature(key).keep_history, false);
   }
   assert.deepEqual({ min: feature('usage').min, max: feature('usage').max }, { min: 0, max: 1e15 });
