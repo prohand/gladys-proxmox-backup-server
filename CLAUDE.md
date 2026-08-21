@@ -22,6 +22,8 @@ npm run lint        # eslint .
 npm run format      # prettier --write .
 npm run format:check
 npm start           # node index.js — needs a reachable Gladys instance
+npm run check:pbs   # read-only diagnostic against a real PBS (PBS_URL, PBS_TOKEN_ID,
+                    # PBS_TOKEN_SECRET); prints the inventory route used per datastore
 ```
 
 CI (`.github/workflows/ci.yml`) runs `format:check`, `lint`, then `test` on Node 24.
@@ -59,7 +61,8 @@ Run all three locally before pushing; formatting is a hard CI gate.
 
 `readInventory()` prefers `/admin/datastore/{store}/groups` (`backup-count` + `last-backup`)
 over listing every snapshot, and falls back to the snapshot list only when those counters are
-missing. `fetchTasks()` pages the task history until the newest verify, GC, and prune tasks
+missing — and logs a warning when it does, so the expensive path is never silent.
+`fetchTasks()` pages the task history until the newest verify, GC, and prune tasks
 have been seen (`TASK_MAX_PAGES` × `TASK_PAGE_SIZE`). Keep both cheap: a refresh runs for
 every datastore, forever.
 

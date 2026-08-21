@@ -89,6 +89,8 @@ test('fetchTasks stops on a short page and respects the page budget', async () =
   assert.equal(requests, TASK_MAX_PAGES);
 });
 
+const silentLogger = { warn: () => {} };
+
 test('readInventory prefers the cheap groups route', async () => {
   const client = {
     getGroups: () =>
@@ -98,9 +100,10 @@ test('readInventory prefers the cheap groups route', async () => {
       ]),
     getSnapshots: () => assert.fail('snapshots must not be listed when groups are available'),
   };
-  assert.deepEqual(await readInventory(client, 'store'), {
+  assert.deepEqual(await readInventory(client, 'store', silentLogger), {
     snapshotCount: 7,
     newestBackupEpoch: 300,
+    source: 'groups',
   });
 });
 
@@ -109,17 +112,21 @@ test('readInventory falls back to the snapshot list', async () => {
     getGroups: () => Promise.reject(new Error('PBS API returned HTTP 404')),
     getSnapshots: () => Promise.resolve([{ 'backup-time': 10 }, { 'backup-time': 60 }]),
   };
-  assert.deepEqual(await readInventory(missingRoute, 'store'), {
+  const warnings = [];
+  assert.deepEqual(await readInventory(missingRoute, 'store', { warn: (m) => warnings.push(m) }), {
     snapshotCount: 2,
     newestBackupEpoch: 60,
+    source: 'snapshots',
   });
+  assert.match(warnings[0], /HTTP 404/);
 
   const groupsWithoutCounters = {
     getGroups: () => Promise.resolve([{ 'backup-id': 'vm/100' }]),
     getSnapshots: () => Promise.resolve([{ 'backup-time': 5 }]),
   };
-  assert.deepEqual(await readInventory(groupsWithoutCounters, 'store'), {
+  assert.deepEqual(await readInventory(groupsWithoutCounters, 'store', silentLogger), {
     snapshotCount: 1,
     newestBackupEpoch: 5,
+    source: 'snapshots',
   });
 });

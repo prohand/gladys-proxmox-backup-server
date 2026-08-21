@@ -49,3 +49,27 @@ The three capacity values (`Usage`, `Total size`, and `Used space`) are mapped t
 - The task history is read page by page until the newest verify, garbage collection, and prune tasks have been found (up to 2000 tasks), so a busy datastore does not push them out of view and back to `Never run`.
 - Datastores that are offline or unmounted report no capacity; the integration then publishes `0` for usage, total size, and used space rather than an invalid value.
 - A refresh that fails (network error, timeout, PBS restart) is retried on the next one-minute Gladys tick instead of waiting a full refresh interval. At startup, the connection is retried four times with an exponential backoff before the integration reports itself as disconnected.
+
+## Checking which inventory route is used
+
+The integration prefers the cheap `groups` route and falls back to the full snapshot list; the fallback is logged as a warning in the container logs (`Falling back to the snapshot list for datastore ...`, with the PBS error that caused it).
+
+To check it against your server without installing anything in Gladys, run the read-only diagnostic from a clone of this repository:
+
+```bash
+PBS_URL=https://pbs.example.com:8007 \
+PBS_TOKEN_ID='gladys@pbs!monitoring' \
+PBS_TOKEN_SECRET='the-token-secret' \
+npm run check:pbs
+```
+
+It prints, per datastore, the route actually used, how long each route takes, and the last verify/GC/prune task. It also cross-checks the snapshot count and the newest backup against the full snapshot list, and exits with code `1` if the two disagree. Add `PBS_NODE=...` for a node other than `localhost`, and `PBS_VERIFY_TLS=false` for a self-signed certificate.
+
+The same routes can be checked by hand:
+
+```bash
+curl -sSf -H "Authorization: PBSAPIToken=gladys@pbs!monitoring:SECRET" \
+  'https://pbs.example.com:8007/api2/json/admin/datastore/NAME/groups' | head -c 400
+```
+
+An HTTP 403 means the ACL is missing `Datastore.Audit` on that datastore; an HTTP 404 means this PBS release does not serve the route and the snapshot fallback is expected.

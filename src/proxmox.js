@@ -1,5 +1,6 @@
 import http from 'node:http';
 import https from 'node:https';
+import { logger } from '@gladysassistant/integration-sdk';
 
 // PBS returns the task history newest-first and paginated. We walk one page at
 // a time until every maintenance task type we care about has been seen, rather
@@ -171,19 +172,33 @@ export function countBackups(groups) {
  * Snapshot count and freshness for a datastore, read from the cheap `groups`
  * route when PBS exposes the counters, falling back to the full snapshot list.
  */
-export async function readInventory(client, store) {
+export async function readInventory(client, store, log = logger) {
+  let reason;
   try {
     const groups = await client.getGroups(store);
     if (
       Array.isArray(groups) &&
       groups.every((group) => Number.isFinite(Number(group['backup-count'] ?? group.backup_count)))
     )
-      return { snapshotCount: countBackups(groups), newestBackupEpoch: newestBackupEpoch(groups) };
-  } catch {
+      return {
+        snapshotCount: countBackups(groups),
+        newestBackupEpoch: newestBackupEpoch(groups),
+        source: 'groups',
+      };
+    reason = 'the groups route does not expose backup-count';
+  } catch (error) {
     // Older PBS releases (or a restricted ACL) may not serve `groups`: fall
     // back to the snapshot list below rather than failing the whole poll.
+    reason = error.message;
   }
+  // Logged so a silent (and much more expensive) fallback is visible in the
+  // container logs instead of only showing up as slow refreshes.
+  log.warn(`Falling back to the snapshot list for datastore ${store}: ${reason}`);
   const snapshots = await client.getSnapshots(store);
   const list = Array.isArray(snapshots) ? snapshots : [];
-  return { snapshotCount: list.length, newestBackupEpoch: newestBackupEpoch(list) };
+  return {
+    snapshotCount: list.length,
+    newestBackupEpoch: newestBackupEpoch(list),
+    source: 'snapshots',
+  };
 }

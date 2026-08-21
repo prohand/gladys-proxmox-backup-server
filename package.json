@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "node --test"
+    "test": "node --test",
+    "check:pbs": "node scripts/check-pbs.js"
   },
   "engines": {
     "node": ">=24"

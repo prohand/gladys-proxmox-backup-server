@@ -20,6 +20,7 @@ npm test
 npm run lint
 npm run format:check
 npm run format      # rewrite files with Prettier
+npm run check:pbs   # read-only diagnostic against a real PBS (see the docs)
 ```
 
 Node 24 is required (see `.nvmrc`); it is the version CI and the Docker image use.
