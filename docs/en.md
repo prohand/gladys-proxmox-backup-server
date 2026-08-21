@@ -34,11 +34,18 @@ The three capacity values (`Usage`, `Total size`, and `Used space`) are mapped t
 | Usage                          | Percentage | Used datastore capacity, rounded to two decimal places.                    |
 | Total size                     | Gigabytes  | Total datastore capacity, rounded to two decimal places.                   |
 | Used space                     | Gigabytes  | Used datastore capacity, rounded to two decimal places.                    |
-| Snapshot count                 | Integer    | Number of snapshots currently stored.                                      |
+| Snapshot count                 | Integer    | Number of snapshots currently stored, summed over the backup groups.       |
 | Last verify status             | Text       | Latest verification status, for example `OK`.                              |
-| Last verify date               | Text       | Latest verification date in ISO 8601 format.                               |
+| Last verify date               | Text       | Latest verification date, in the configured format.                        |
 | Last garbage collection status | Text       | Latest garbage collection status, for example `OK`.                        |
-| Last garbage collection date   | Text       | Latest garbage collection date in ISO 8601 format.                         |
+| Last garbage collection date   | Text       | Latest garbage collection date, in the configured format.                  |
 | Last prune status              | Text       | Latest prune status, for example `OK`.                                     |
-| Last prune date                | Text       | Latest prune date in ISO 8601 format.                                      |
+| Last prune date                | Text       | Latest prune date, in the configured format.                               |
 | Backup stale (> 26 h)          | `0` or `1` | `1` when no snapshot exists or the newest snapshot is older than 26 hours. |
+
+## Behaviour notes
+
+- Snapshot count and backup freshness are read from the datastore's backup groups (`backup-count` and `last-backup`), so a datastore holding thousands of snapshots costs one small response per refresh. If a PBS release does not expose those counters, the integration falls back to listing the snapshots.
+- The task history is read page by page until the newest verify, garbage collection, and prune tasks have been found (up to 2000 tasks), so a busy datastore does not push them out of view and back to `Never run`.
+- Datastores that are offline or unmounted report no capacity; the integration then publishes `0` for usage, total size, and used space rather than an invalid value.
+- A refresh that fails (network error, timeout, PBS restart) is retried on the next one-minute Gladys tick instead of waiting a full refresh interval. At startup, the connection is retried four times with an exponential backoff before the integration reports itself as disconnected.

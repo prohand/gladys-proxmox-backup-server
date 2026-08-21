@@ -41,7 +41,7 @@ Run all three locally before pushing; formatting is a hard CI gate.
 
 ## Conventions
 
-- ESM only (`"type": "module"`), Node ≥ 20 syntax, no transpilation, no bundler.
+- ESM only (`"type": "module"`), Node 24 (`.nvmrc`, `engines`, CI, and the Docker image all agree), no transpilation, no bundler.
 - **Zero runtime dependencies** beyond the Gladys SDK. Do not add an HTTP client, a date
   library, or a test framework — `node:http`, manual token formatting, and `node:test`
   are deliberate choices.
@@ -51,8 +51,17 @@ Run all three locally before pushing; formatting is a hard CI gate.
   results, connection-status messages, and the two docs files. A change that touches one
   language must touch the other.
 - Business logic lives in pure, exported functions taking explicit `now`/`dateFormat`
-  arguments so tests need no clock or network mocking. Keep `index.js` thin.
+  arguments, and `createRuntime()` takes its I/O as injected dependencies, so tests need
+  neither a clock, a network, nor a Gladys instance. Keep `index.js` thin.
 - Task dates are formatted in **UTC** — both `formatTaskDate` branches use `getUTC*`.
+
+## Reading PBS efficiently
+
+`readInventory()` prefers `/admin/datastore/{store}/groups` (`backup-count` + `last-backup`)
+over listing every snapshot, and falls back to the snapshot list only when those counters are
+missing. `fetchTasks()` pages the task history until the newest verify, GC, and prune tasks
+have been seen (`TASK_MAX_PAGES` × `TASK_PAGE_SIZE`). Keep both cheap: a refresh runs for
+every datastore, forever.
 
 ## Polling model
 
@@ -63,11 +72,12 @@ on failure so an error retries on the next tick. The 300 s floor exists to limit
 the Gladys state database — do not lower it.
 
 `datastoreByExternalId` is rebuilt by `discover()`; an unknown `external_id` during a poll
-triggers one re-discovery before giving up.
+triggers one re-discovery before giving up. `start()` retries the initial connection with an
+exponential backoff before reporting a disconnected status.
 
 ## Release
 
-Never bump the version by hand. Use **Actions → Release → Run workflow** (patch/minor/major):
+Add user-visible changes to `CHANGELOG.md` under `## [Unreleased]`. Never bump the version by hand. Use **Actions → Release → Run workflow** (patch/minor/major):
 it bumps `package.json`, `package-lock.json`, and both `version` and `docker_image` in the
 manifest, tags `vX.Y.Z`, then calls `build.yml` to publish the multi-arch ghcr.io image.
 

@@ -19,6 +19,9 @@ npm install
 npm test
 npm run lint
 npm run format:check
+npm run format      # rewrite files with Prettier
 ```
+
+Node 24 is required (see `.nvmrc`); it is the version CI and the Docker image use.
 
 The structure, SDK bootstrap, manifest, Docker image, and CI/release workflows are based on Gladys Assistant's [official JavaScript integration template](https://github.com/GladysAssistant/integration-template-js).
