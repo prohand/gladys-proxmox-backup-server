@@ -9,7 +9,7 @@
 //   npm run check:pbs
 //
 // Optional: PBS_NODE (default localhost), PBS_VERIFY_TLS=false for a
-// self-signed certificate. Read-only: only GET routes are called.
+// self-signed certificate, PBS_TIMEZONE (default UTC) for the task dates. Read-only: only GET routes are called.
 // -----------------------------------------------------------------------------
 import { normalizeConfig } from '../src/config.js';
 import { fetchTasks, ProxmoxClient, readInventory, taskDetails } from '../src/proxmox.js';
@@ -20,6 +20,7 @@ const config = normalizeConfig({
   api_token_secret: process.env.PBS_TOKEN_SECRET,
   node: process.env.PBS_NODE,
   verify_tls: process.env.PBS_VERIFY_TLS !== 'false',
+  timezone: process.env.PBS_TIMEZONE,
 });
 
 if (!config.base_url || !config.api_token_id || !config.api_token_secret) {
@@ -75,7 +76,7 @@ for (const { store } of stores) {
 
   const tasks = await timed('task history', () => fetchTasks(client, store));
   for (const type of ['verify', 'gc', 'prune']) {
-    const { status, date } = taskDetails(tasks, type, config.date_format);
+    const { status, date } = taskDetails(tasks, type, config.date_format, config.timezone);
     console.log(`  last ${type}: ${status} — ${date}`);
   }
   console.log('');

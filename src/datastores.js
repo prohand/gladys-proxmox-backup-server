@@ -3,9 +3,16 @@ import {
   DEVICE_FEATURE_TYPES,
   DEVICE_FEATURE_UNITS,
 } from '@gladysassistant/integration-sdk';
-import { fetchTasks, ProxmoxClient, readInventory, taskDetails } from './proxmox.js';
+import {
+  fetchTasks,
+  formatTaskDate,
+  ProxmoxClient,
+  readInventory,
+  TASK_TYPE_ALIASES,
+  taskDetails,
+} from './proxmox.js';
 
-const STALE_AFTER_SECONDS = 26 * 60 * 60;
+export const STALE_AFTER_SECONDS = 26 * 60 * 60;
 export const GLADYS_POLL_FREQUENCY_MS = 60 * 1000;
 const MAX_NUMERIC_STATE = 1e15;
 const CAT = DEVICE_FEATURE_CATEGORIES;
@@ -95,6 +102,65 @@ export function buildDatastoreDevice(gladys, store) {
   };
 }
 
+/**
+ * Everything the integration knows about one datastore after a refresh, in
+ * plain values: the device states, the dashboard widgets, the scene triggers
+ * and the scene actions are all built from this one object.
+ */
+export function summarizeDatastore(
+  store,
+  inventory,
+  tasks,
+  now = Date.now(),
+  dateFormat = 'iso',
+  timeZone = 'UTC',
+) {
+  const newestBackupEpoch = Number(inventory.newestBackupEpoch) || 0;
+  const ageSeconds = now / 1000 - newestBackupEpoch;
+  // A datastore that is offline or unmounted reports no capacity at all; keep
+  // publishing 0 instead of NaN so the Gladys history stays usable.
+  const total = Number(store.total);
+  const used = Number(store.used);
+  const hasCapacity = Number.isFinite(total) && Number.isFinite(used) && total > 0;
+  return {
+    store: store.store,
+    usagePercent: hasCapacity ? roundToTwo((used / total) * 100) : 0,
+    totalGb: roundToTwo(total / 1e9),
+    usedGb: roundToTwo(used / 1e9),
+    snapshotCount: roundToTwo(inventory.snapshotCount),
+    newestBackupEpoch,
+    lastBackup: newestBackupEpoch
+      ? formatTaskDate(newestBackupEpoch, dateFormat, timeZone)
+      : 'Never',
+    hoursSinceBackup: newestBackupEpoch ? roundToTwo(ageSeconds / 3600) : null,
+    stale: !newestBackupEpoch || ageSeconds > STALE_AFTER_SECONDS,
+    tasks: Object.fromEntries(
+      Object.keys(TASK_TYPE_ALIASES).map((type) => [
+        type,
+        taskDetails(tasks, type, dateFormat, timeZone),
+      ]),
+    ),
+  };
+}
+
+export function datastoreStates(gladys, summary) {
+  const ids = gladys.externalIds('pbs-datastore', summary.store);
+  const { verify, gc, prune } = summary.tasks;
+  return [
+    { device_feature_external_id: ids.feature('usage'), state: summary.usagePercent },
+    { device_feature_external_id: ids.feature('total'), state: summary.totalGb },
+    { device_feature_external_id: ids.feature('used'), state: summary.usedGb },
+    { device_feature_external_id: ids.feature('snapshots'), state: summary.snapshotCount },
+    { device_feature_external_id: ids.feature('last-verify'), text: verify.status },
+    { device_feature_external_id: ids.feature('last-verify-date'), text: verify.date },
+    { device_feature_external_id: ids.feature('last-gc'), text: gc.status },
+    { device_feature_external_id: ids.feature('last-gc-date'), text: gc.date },
+    { device_feature_external_id: ids.feature('last-prune'), text: prune.status },
+    { device_feature_external_id: ids.feature('last-prune-date'), text: prune.date },
+    { device_feature_external_id: ids.feature('backup-stale'), state: summary.stale ? 1 : 0 },
+  ];
+}
+
 export function buildDatastoreStates(
   gladys,
   store,
@@ -102,40 +168,15 @@ export function buildDatastoreStates(
   tasks,
   now = Date.now(),
   dateFormat = 'iso',
+  timeZone = 'UTC',
 ) {
-  const ids = gladys.externalIds('pbs-datastore', store.store);
-  const latest = Number(inventory.newestBackupEpoch);
-  const stale = !latest || now / 1000 - latest > STALE_AFTER_SECONDS;
-  const verify = taskDetails(tasks, 'verify', dateFormat);
-  const garbageCollection = taskDetails(tasks, 'gc', dateFormat);
-  const prune = taskDetails(tasks, 'prune', dateFormat);
-  // A datastore that is offline or unmounted reports no capacity at all; keep
-  // publishing 0 instead of NaN so the Gladys history stays usable.
-  const total = Number(store.total);
-  const used = Number(store.used);
-  const hasCapacity = Number.isFinite(total) && Number.isFinite(used) && total > 0;
-  return [
-    {
-      device_feature_external_id: ids.feature('usage'),
-      state: hasCapacity ? roundToTwo((used / total) * 100) : 0,
-    },
-    { device_feature_external_id: ids.feature('total'), state: roundToTwo(total / 1e9) },
-    { device_feature_external_id: ids.feature('used'), state: roundToTwo(used / 1e9) },
-    {
-      device_feature_external_id: ids.feature('snapshots'),
-      state: roundToTwo(inventory.snapshotCount),
-    },
-    { device_feature_external_id: ids.feature('last-verify'), text: verify.status },
-    { device_feature_external_id: ids.feature('last-verify-date'), text: verify.date },
-    { device_feature_external_id: ids.feature('last-gc'), text: garbageCollection.status },
-    { device_feature_external_id: ids.feature('last-gc-date'), text: garbageCollection.date },
-    { device_feature_external_id: ids.feature('last-prune'), text: prune.status },
-    { device_feature_external_id: ids.feature('last-prune-date'), text: prune.date },
-    { device_feature_external_id: ids.feature('backup-stale'), state: stale ? 1 : 0 },
-  ];
+  return datastoreStates(
+    gladys,
+    summarizeDatastore(store, inventory, tasks, now, dateFormat, timeZone),
+  );
 }
 
-export async function readDatastore(gladys, storeName, config, now = Date.now()) {
+export async function readDatastore(storeName, config, now = Date.now()) {
   const client = new ProxmoxClient(config);
   const [stores, inventory, tasks] = await Promise.all([
     client.getDatastores(),
@@ -144,5 +185,5 @@ export async function readDatastore(gladys, storeName, config, now = Date.now())
   ]);
   const store = stores.find((item) => item.store === storeName);
   if (!store) throw new Error(`Datastore ${storeName} no longer exists`);
-  return buildDatastoreStates(gladys, store, inventory, tasks, now, config.date_format);
+  return summarizeDatastore(store, inventory, tasks, now, config.date_format, config.timezone);
 }

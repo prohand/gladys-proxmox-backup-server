@@ -6,14 +6,11 @@
     "en": "Read-only monitoring of Proxmox Backup Server datastores and maintenance tasks.",
     "fr": "Supervision en lecture seule des datastores et tâches de maintenance Proxmox Backup Server."
   },
-  "version": "1.0.3",
-  "docker_image": "ghcr.io/prohand/gladys-proxmox-backup-server:1.0.3",
-  "gladys_version": ">=4.86.0",
+  "version": "2.0.2",
+  "docker_image": "ghcr.io/prohand/gladys-proxmox-backup-server:2.0.2",
+  "gladys_version": ">=5.1.0",
   "cover_image": "https://raw.githubusercontent.com/prohand/gladys-proxmox-backup-server/main/cover.png",
-  "categories": [
-    "services",
-    "network"
-  ],
+  "categories": ["services", "network"],
   "config_schema": [
     {
       "key": "intro",
@@ -111,8 +108,8 @@
         "fr": "Format de date"
       },
       "description": {
-        "en": "Select how task dates are displayed. Dates are displayed in UTC.",
-        "fr": "Sélectionnez le format d'affichage des dates des tâches. Les dates sont affichées en UTC."
+        "en": "Select how task dates are displayed, in the time zone set below.",
+        "fr": "Sélectionnez le format d'affichage des dates des tâches, dans le fuseau horaire indiqué ci-dessous."
       },
       "display": "dropdown",
       "options": [
@@ -147,6 +144,20 @@
       ],
       "required": false,
       "default": "iso"
+    },
+    {
+      "key": "timezone",
+      "type": "string",
+      "label": {
+        "en": "Time zone",
+        "fr": "Fuseau horaire"
+      },
+      "description": {
+        "en": "IANA name used to display dates, for example Europe/Paris. Empty or unknown: UTC.",
+        "fr": "Nom IANA utilisé pour afficher les dates, par exemple Europe/Paris. Vide ou inconnu : UTC."
+      },
+      "required": false,
+      "default": "UTC"
     }
   ],
   "actions": [
@@ -157,6 +168,625 @@
         "fr": "Tester la connexion"
       },
       "timeout_seconds": 30
+    }
+  ],
+  "widgets": [
+    {
+      "key": "datastore",
+      "label": {
+        "en": "PBS datastore",
+        "fr": "Datastore PBS"
+      },
+      "description": {
+        "en": "Usage, snapshots and maintenance tasks of one datastore.",
+        "fr": "Occupation, snapshots et tâches de maintenance d'un datastore."
+      },
+      "icon": "hard-drive",
+      "settings": [
+        {
+          "key": "datastore",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Datastore",
+            "fr": "Datastore"
+          },
+          "required": true
+        }
+      ],
+      "action_timeout_seconds": 60
+    },
+    {
+      "key": "overview",
+      "label": {
+        "en": "PBS backups",
+        "fr": "Sauvegardes PBS"
+      },
+      "description": {
+        "en": "Health of every datastore on one card.",
+        "fr": "État de tous les datastores sur une seule carte."
+      },
+      "icon": "server",
+      "action_timeout_seconds": 120
+    }
+  ],
+  "scene_triggers": [
+    {
+      "key": "task_finished",
+      "label": {
+        "en": "PBS maintenance task finished",
+        "fr": "Tâche de maintenance PBS terminée"
+      },
+      "description": {
+        "en": "A verify, garbage collection or prune task has ended.",
+        "fr": "Une tâche de vérification, de garbage collection ou de prune est terminée."
+      },
+      "fields": [
+        {
+          "key": "datastore",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Datastore",
+            "fr": "Datastore"
+          },
+          "description": {
+            "en": "Leave empty for any datastore.",
+            "fr": "Laissez vide pour n'importe quel datastore."
+          }
+        },
+        {
+          "key": "task_type",
+          "type": "multi_select",
+          "label": {
+            "en": "Task type",
+            "fr": "Type de tâche"
+          },
+          "options": [
+            {
+              "value": "verify",
+              "label": {
+                "en": "Verify",
+                "fr": "Vérification"
+              }
+            },
+            {
+              "value": "gc",
+              "label": {
+                "en": "Garbage collection",
+                "fr": "Garbage collection"
+              }
+            },
+            {
+              "value": "prune",
+              "label": {
+                "en": "Prune",
+                "fr": "Prune"
+              }
+            }
+          ]
+        },
+        {
+          "key": "result",
+          "type": "multi_select",
+          "label": {
+            "en": "Result",
+            "fr": "Résultat"
+          },
+          "options": [
+            {
+              "value": "ok",
+              "label": {
+                "en": "OK",
+                "fr": "OK"
+              }
+            },
+            {
+              "value": "warning",
+              "label": {
+                "en": "Warnings",
+                "fr": "Avertissements"
+              }
+            },
+            {
+              "value": "error",
+              "label": {
+                "en": "Error",
+                "fr": "Erreur"
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "key": "datastore_name",
+          "type": "string",
+          "label": {
+            "en": "Datastore name",
+            "fr": "Nom du datastore"
+          }
+        },
+        {
+          "key": "task_type",
+          "type": "string",
+          "label": {
+            "en": "Task type",
+            "fr": "Type de tâche"
+          }
+        },
+        {
+          "key": "result",
+          "type": "string",
+          "label": {
+            "en": "Result (ok, warning, error)",
+            "fr": "Résultat (ok, warning, error)"
+          }
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "label": {
+            "en": "PBS status",
+            "fr": "Statut PBS"
+          }
+        },
+        {
+          "key": "date",
+          "type": "string",
+          "label": {
+            "en": "End date",
+            "fr": "Date de fin"
+          }
+        }
+      ]
+    },
+    {
+      "key": "new_backup",
+      "label": {
+        "en": "New PBS backup",
+        "fr": "Nouvelle sauvegarde PBS"
+      },
+      "description": {
+        "en": "A newer snapshot appeared on the datastore.",
+        "fr": "Un snapshot plus récent est apparu sur le datastore."
+      },
+      "fields": [
+        {
+          "key": "datastore",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Datastore",
+            "fr": "Datastore"
+          },
+          "description": {
+            "en": "Leave empty for any datastore.",
+            "fr": "Laissez vide pour n'importe quel datastore."
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "datastore_name",
+          "type": "string",
+          "label": {
+            "en": "Datastore name",
+            "fr": "Nom du datastore"
+          }
+        },
+        {
+          "key": "last_backup",
+          "type": "string",
+          "label": {
+            "en": "Last backup date",
+            "fr": "Date de la dernière sauvegarde"
+          }
+        },
+        {
+          "key": "snapshot_count",
+          "type": "number",
+          "label": {
+            "en": "Snapshot count",
+            "fr": "Nombre de snapshots"
+          }
+        }
+      ]
+    },
+    {
+      "key": "backup_stale",
+      "label": {
+        "en": "PBS backup is stale",
+        "fr": "Sauvegarde PBS trop ancienne"
+      },
+      "description": {
+        "en": "The newest snapshot just became older than 26 hours.",
+        "fr": "Le snapshot le plus récent vient de dépasser 26 heures."
+      },
+      "fields": [
+        {
+          "key": "datastore",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Datastore",
+            "fr": "Datastore"
+          },
+          "description": {
+            "en": "Leave empty for any datastore.",
+            "fr": "Laissez vide pour n'importe quel datastore."
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "datastore_name",
+          "type": "string",
+          "label": {
+            "en": "Datastore name",
+            "fr": "Nom du datastore"
+          }
+        },
+        {
+          "key": "last_backup",
+          "type": "string",
+          "label": {
+            "en": "Last backup date",
+            "fr": "Date de la dernière sauvegarde"
+          }
+        },
+        {
+          "key": "hours_since_backup",
+          "type": "number",
+          "label": {
+            "en": "Hours since the last backup",
+            "fr": "Heures depuis la dernière sauvegarde"
+          }
+        }
+      ]
+    },
+    {
+      "key": "pbs_unreachable",
+      "label": {
+        "en": "PBS unreachable",
+        "fr": "PBS injoignable"
+      },
+      "description": {
+        "en": "A datastore refresh failed. Fires once per outage.",
+        "fr": "Une lecture de datastore a échoué. Une seule fois par panne."
+      },
+      "fields": [
+        {
+          "key": "datastore",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Datastore",
+            "fr": "Datastore"
+          },
+          "description": {
+            "en": "Leave empty for any datastore.",
+            "fr": "Laissez vide pour n'importe quel datastore."
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "datastore_name",
+          "type": "string",
+          "label": {
+            "en": "Datastore name",
+            "fr": "Nom du datastore"
+          }
+        },
+        {
+          "key": "error",
+          "type": "string",
+          "label": {
+            "en": "Error message",
+            "fr": "Message d'erreur"
+          }
+        }
+      ]
+    },
+    {
+      "key": "pbs_reachable",
+      "label": {
+        "en": "PBS reachable again",
+        "fr": "PBS de nouveau joignable"
+      },
+      "description": {
+        "en": "A datastore refresh succeeded after a failure.",
+        "fr": "Une lecture de datastore a réussi après un échec."
+      },
+      "fields": [
+        {
+          "key": "datastore",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Datastore",
+            "fr": "Datastore"
+          },
+          "description": {
+            "en": "Leave empty for any datastore.",
+            "fr": "Laissez vide pour n'importe quel datastore."
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "datastore_name",
+          "type": "string",
+          "label": {
+            "en": "Datastore name",
+            "fr": "Nom du datastore"
+          }
+        }
+      ]
+    }
+  ],
+  "scene_actions": [
+    {
+      "key": "get_datastore_status",
+      "label": {
+        "en": "Get PBS datastore status",
+        "fr": "Lire l'état d'un datastore PBS"
+      },
+      "description": {
+        "en": "Read-only: returns usage, snapshots and the last maintenance tasks.",
+        "fr": "Lecture seule : renvoie l'occupation, les snapshots et les dernières tâches de maintenance."
+      },
+      "timeout_seconds": 60,
+      "fields": [
+        {
+          "key": "datastore",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Datastore",
+            "fr": "Datastore"
+          },
+          "required": true
+        },
+        {
+          "key": "refresh",
+          "type": "boolean",
+          "label": {
+            "en": "Read PBS now",
+            "fr": "Lire PBS maintenant"
+          },
+          "description": {
+            "en": "Otherwise the values of the last refresh are used.",
+            "fr": "Sinon, les valeurs de la dernière lecture sont utilisées."
+          },
+          "default": false
+        }
+      ],
+      "outputs": [
+        {
+          "key": "datastore_name",
+          "type": "string",
+          "label": {
+            "en": "Datastore name",
+            "fr": "Nom du datastore"
+          }
+        },
+        {
+          "key": "usage_percent",
+          "type": "number",
+          "label": {
+            "en": "Usage (%)",
+            "fr": "Utilisation (%)"
+          }
+        },
+        {
+          "key": "used_gb",
+          "type": "number",
+          "label": {
+            "en": "Used space (GB)",
+            "fr": "Espace utilisé (Go)"
+          }
+        },
+        {
+          "key": "total_gb",
+          "type": "number",
+          "label": {
+            "en": "Total size (GB)",
+            "fr": "Taille totale (Go)"
+          }
+        },
+        {
+          "key": "snapshot_count",
+          "type": "number",
+          "label": {
+            "en": "Snapshot count",
+            "fr": "Nombre de snapshots"
+          }
+        },
+        {
+          "key": "backup_stale",
+          "type": "boolean",
+          "label": {
+            "en": "Backup stale (> 26 h)",
+            "fr": "Sauvegarde trop ancienne (> 26 h)"
+          }
+        },
+        {
+          "key": "last_backup",
+          "type": "string",
+          "label": {
+            "en": "Last backup date",
+            "fr": "Date de la dernière sauvegarde"
+          }
+        },
+        {
+          "key": "hours_since_backup",
+          "type": "number",
+          "label": {
+            "en": "Hours since the last backup",
+            "fr": "Heures depuis la dernière sauvegarde"
+          }
+        },
+        {
+          "key": "last_verify_status",
+          "type": "string",
+          "label": {
+            "en": "Last verify status",
+            "fr": "Statut de la dernière vérification"
+          }
+        },
+        {
+          "key": "last_verify_date",
+          "type": "string",
+          "label": {
+            "en": "Last verify date",
+            "fr": "Date de la dernière vérification"
+          }
+        },
+        {
+          "key": "last_gc_status",
+          "type": "string",
+          "label": {
+            "en": "Last garbage collection status",
+            "fr": "Statut du dernier garbage collection"
+          }
+        },
+        {
+          "key": "last_gc_date",
+          "type": "string",
+          "label": {
+            "en": "Last garbage collection date",
+            "fr": "Date du dernier garbage collection"
+          }
+        },
+        {
+          "key": "last_prune_status",
+          "type": "string",
+          "label": {
+            "en": "Last prune status",
+            "fr": "Statut du dernier prune"
+          }
+        },
+        {
+          "key": "last_prune_date",
+          "type": "string",
+          "label": {
+            "en": "Last prune date",
+            "fr": "Date du dernier prune"
+          }
+        }
+      ]
+    },
+    {
+      "key": "get_backup_report",
+      "label": {
+        "en": "Get PBS backup report",
+        "fr": "Obtenir le rapport des sauvegardes PBS"
+      },
+      "description": {
+        "en": "Read-only: counters for every datastore and a text ready to send.",
+        "fr": "Lecture seule : compteurs de tous les datastores et un texte prêt à envoyer."
+      },
+      "timeout_seconds": 120,
+      "fields": [
+        {
+          "key": "refresh",
+          "type": "boolean",
+          "label": {
+            "en": "Read PBS now",
+            "fr": "Lire PBS maintenant"
+          },
+          "description": {
+            "en": "Otherwise the values of the last refresh are used.",
+            "fr": "Sinon, les valeurs de la dernière lecture sont utilisées."
+          },
+          "default": false
+        },
+        {
+          "key": "language",
+          "type": "select",
+          "label": {
+            "en": "Report language",
+            "fr": "Langue du rapport"
+          },
+          "default": "en",
+          "options": [
+            {
+              "value": "en",
+              "label": {
+                "en": "English",
+                "fr": "Anglais"
+              }
+            },
+            {
+              "value": "fr",
+              "label": {
+                "en": "French",
+                "fr": "Français"
+              }
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "key": "datastore_count",
+          "type": "number",
+          "label": {
+            "en": "Datastore count",
+            "fr": "Nombre de datastores"
+          }
+        },
+        {
+          "key": "stale_count",
+          "type": "number",
+          "label": {
+            "en": "Stale backups",
+            "fr": "Sauvegardes trop anciennes"
+          }
+        },
+        {
+          "key": "failed_task_count",
+          "type": "number",
+          "label": {
+            "en": "Failed tasks",
+            "fr": "Tâches en échec"
+          }
+        },
+        {
+          "key": "unreachable_count",
+          "type": "number",
+          "label": {
+            "en": "Unreachable datastores",
+            "fr": "Datastores injoignables"
+          }
+        },
+        {
+          "key": "max_usage_percent",
+          "type": "number",
+          "label": {
+            "en": "Highest usage (%)",
+            "fr": "Utilisation la plus haute (%)"
+          }
+        },
+        {
+          "key": "all_ok",
+          "type": "boolean",
+          "label": {
+            "en": "Everything OK",
+            "fr": "Tout est OK"
+          }
+        },
+        {
+          "key": "summary",
+          "type": "string",
+          "label": {
+            "en": "Report text",
+            "fr": "Texte du rapport"
+          }
+        }
+      ]
     }
   ]
 }
