@@ -31,9 +31,10 @@ proxmox-backup-manager user permissions 'gladys@pbs!monitoring'
 4. Nœud : généralement `localhost`; indiquez le nom retourné par PBS si nécessaire.
 5. Gardez la vérification TLS activée. Ne la désactivez que pour un certificat autosigné sur un réseau de confiance.
 6. L'intervalle de rafraîchissement est de 15 minutes par défaut. Il ne peut pas être inférieur à 5 minutes afin de limiter la croissance de la base Gladys, et peut être augmenté jusqu'à 24 heures.
-7. La liste déroulante générale `Format de date` s'applique à toutes les dates des tâches. Elle propose les formats ISO 8601, jour/mois/année, année-mois-jour et mois/jour/année. Les dates sont formatées en UTC.
+7. La liste déroulante générale `Format de date` s'applique à toutes les dates des tâches. Elle propose les formats ISO 8601, jour/mois/année, année-mois-jour et mois/jour/année.
+8. Le champ `Fuseau horaire` fixe le fuseau d'affichage des dates, sous forme de nom IANA comme `Europe/Paris` (heures d'été et d'hiver gérées). Il vaut `UTC` par défaut ; une valeur vide ou inconnue revient aussi à UTC. En ISO 8601, un fuseau autre que UTC ajoute son décalage, par exemple `2026-09-23T23:30:01+02:00`.
 
-> Après avoir modifié et sauvegardé le format de date, ouvrez l'appareil PBS concerné dans Gladys et sauvegardez-le de nouveau pour appliquer le changement.
+> Après avoir modifié et sauvegardé le format de date ou le fuseau horaire, ouvrez l'appareil PBS concerné dans Gladys et sauvegardez-le de nouveau pour appliquer le changement.
 
 Le jeton est envoyé avec l'en-tête natif `Authorization: PBSAPIToken=...`; aucun mot de passe n'est envoyé à chaque requête.
 
@@ -65,12 +66,12 @@ Ces fonctions demandent Gladys **5.1.0** ou plus récent. Elles lisent PBS uniqu
 
 Ajoutez-les depuis l'édition du tableau de bord, dans la liste des widgets de cette intégration.
 
-| Widget          | Réglages     | Contenu                                                                                                                                                                                 |
-| --------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Datastore PBS   | Un datastore | Jauge d'utilisation, espace utilisé, taille totale, nombre de snapshots, courbe d'utilisation sur 30 jours, dernière sauvegarde et dernier statut verify/GC/prune, bouton `Actualiser`. |
-| Sauvegardes PBS | Aucun        | Nombre de datastores, sauvegardes trop anciennes, tâches en échec, datastore le plus plein, une ligne d'état par datastore (10 au maximum), bouton `Actualiser`.                        |
+| Widget          | Réglages     | Contenu                                                                                                                                                                                      |
+| --------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Datastore PBS   | Un datastore | Jauge d'utilisation, espace libre, nombre de snapshots, courbe d'utilisation sur 30 jours, dernière sauvegarde, espace utilisé / total, dernier statut verify/GC/prune, bouton `Actualiser`. |
+| Sauvegardes PBS | Aucun        | Utilisation du datastore le plus plein, sauvegardes en retard, tâches en échec, une ligne d'état par datastore (10 au maximum), bouton `Actualiser`.                                         |
 
-Les tuiles de capacité et la courbe suivent les états de l'appareil en direct. Les lignes d'état sont mises à jour après chaque rafraîchissement. Le bouton `Actualiser` relit PBS tout de suite.
+La tuile snapshots et la courbe suivent les états de l'appareil en direct. Les autres tuiles et les lignes d'état sont mises à jour après chaque rafraîchissement. Le bouton `Actualiser` relit PBS tout de suite.
 
 ### Déclencheurs de scène
 

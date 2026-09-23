@@ -123,19 +123,65 @@ export async function fetchTasks(client, store, types = Object.keys(TASK_TYPE_AL
   return tasks;
 }
 
-export function formatTaskDate(epoch, format = 'iso') {
+const zoneFormatters = new Map();
+
+/**
+ * Wall-clock fields of `date` in `timeZone`, plus the zone offset in minutes.
+ * One `Intl.DateTimeFormat` per zone is cached: a refresh formats a handful of
+ * dates for every datastore, forever.
+ */
+function zonedFields(date, timeZone) {
+  if (!zoneFormatters.has(timeZone)) {
+    zoneFormatters.set(
+      timeZone,
+      new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        hourCycle: 'h23',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }),
+    );
+  }
+  const parts = Object.fromEntries(
+    zoneFormatters
+      .get(timeZone)
+      .formatToParts(date)
+      .map(({ type, value }) => [type, Number(value)]),
+  );
+  const wallClock = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second,
+  );
+  const offsetMinutes = Math.round((wallClock - Math.floor(date.getTime() / 1000) * 1000) / 60000);
+  return { ...parts, offsetMinutes };
+}
+
+export function formatTaskDate(epoch, format = 'iso', timeZone = 'UTC') {
   const date = new Date(Number(epoch) * 1000);
-  if (format.toLowerCase() === 'iso') return date.toISOString();
+  const isIso = format.toLowerCase() === 'iso';
+  if (isIso && timeZone === 'UTC') return date.toISOString();
   const pad = (value) => String(value).padStart(2, '0');
+  const fields = zonedFields(date, timeZone);
   const tokens = {
-    YYYY: date.getUTCFullYear(),
-    MM: pad(date.getUTCMonth() + 1),
-    DD: pad(date.getUTCDate()),
-    HH: pad(date.getUTCHours()),
-    mm: pad(date.getUTCMinutes()),
-    ss: pad(date.getUTCSeconds()),
+    YYYY: fields.year,
+    MM: pad(fields.month),
+    DD: pad(fields.day),
+    HH: pad(fields.hour),
+    mm: pad(fields.minute),
+    ss: pad(fields.second),
   };
-  return format.replace(/YYYY|MM|DD|HH|mm|ss/g, (token) => tokens[token]);
+  if (!isIso) return format.replace(/YYYY|MM|DD|HH|mm|ss/g, (token) => tokens[token]);
+  const sign = fields.offsetMinutes < 0 ? '-' : '+';
+  const offset = Math.abs(fields.offsetMinutes);
+  return `${tokens.YYYY}-${tokens.MM}-${tokens.DD}T${tokens.HH}:${tokens.mm}:${tokens.ss}${sign}${pad(Math.floor(offset / 60))}:${pad(offset % 60)}`;
 }
 
 /**
@@ -152,7 +198,7 @@ export function taskResult(task) {
   return 'error';
 }
 
-export function taskDetails(tasks, type, dateFormat = 'iso') {
+export function taskDetails(tasks, type, dateFormat = 'iso', timeZone = 'UTC') {
   const task = tasks
     .filter((item) => TASK_TYPE_ALIASES[type].includes(workerType(item)))
     .sort(
@@ -160,7 +206,7 @@ export function taskDetails(tasks, type, dateFormat = 'iso') {
     )[0];
   if (!task) return { status: 'Never run', date: 'Never run', result: 'never', id: null };
   const status = task.status ?? (task.endtime ? 'OK' : 'running');
-  const date = formatTaskDate(task.endtime ?? task.starttime, dateFormat);
+  const date = formatTaskDate(task.endtime ?? task.starttime, dateFormat, timeZone);
   // The UPID identifies one run; it is what tells a new task from the one
   // already reported when the scene triggers compare two refreshes.
   const id = String(task.upid ?? `${workerType(task)}:${task.starttime ?? task.endtime}`);

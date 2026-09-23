@@ -107,7 +107,14 @@ export function buildDatastoreDevice(gladys, store) {
  * plain values: the device states, the dashboard widgets, the scene triggers
  * and the scene actions are all built from this one object.
  */
-export function summarizeDatastore(store, inventory, tasks, now = Date.now(), dateFormat = 'iso') {
+export function summarizeDatastore(
+  store,
+  inventory,
+  tasks,
+  now = Date.now(),
+  dateFormat = 'iso',
+  timeZone = 'UTC',
+) {
   const newestBackupEpoch = Number(inventory.newestBackupEpoch) || 0;
   const ageSeconds = now / 1000 - newestBackupEpoch;
   // A datastore that is offline or unmounted reports no capacity at all; keep
@@ -122,11 +129,16 @@ export function summarizeDatastore(store, inventory, tasks, now = Date.now(), da
     usedGb: roundToTwo(used / 1e9),
     snapshotCount: roundToTwo(inventory.snapshotCount),
     newestBackupEpoch,
-    lastBackup: newestBackupEpoch ? formatTaskDate(newestBackupEpoch, dateFormat) : 'Never',
+    lastBackup: newestBackupEpoch
+      ? formatTaskDate(newestBackupEpoch, dateFormat, timeZone)
+      : 'Never',
     hoursSinceBackup: newestBackupEpoch ? roundToTwo(ageSeconds / 3600) : null,
     stale: !newestBackupEpoch || ageSeconds > STALE_AFTER_SECONDS,
     tasks: Object.fromEntries(
-      Object.keys(TASK_TYPE_ALIASES).map((type) => [type, taskDetails(tasks, type, dateFormat)]),
+      Object.keys(TASK_TYPE_ALIASES).map((type) => [
+        type,
+        taskDetails(tasks, type, dateFormat, timeZone),
+      ]),
     ),
   };
 }
@@ -156,8 +168,12 @@ export function buildDatastoreStates(
   tasks,
   now = Date.now(),
   dateFormat = 'iso',
+  timeZone = 'UTC',
 ) {
-  return datastoreStates(gladys, summarizeDatastore(store, inventory, tasks, now, dateFormat));
+  return datastoreStates(
+    gladys,
+    summarizeDatastore(store, inventory, tasks, now, dateFormat, timeZone),
+  );
 }
 
 export async function readDatastore(storeName, config, now = Date.now()) {
@@ -169,5 +185,5 @@ export async function readDatastore(storeName, config, now = Date.now()) {
   ]);
   const store = stores.find((item) => item.store === storeName);
   if (!store) throw new Error(`Datastore ${storeName} no longer exists`);
-  return summarizeDatastore(store, inventory, tasks, now, config.date_format);
+  return summarizeDatastore(store, inventory, tasks, now, config.date_format, config.timezone);
 }

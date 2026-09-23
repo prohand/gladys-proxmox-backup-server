@@ -19,9 +19,11 @@ PBS API tokens use separate ACL entries by design; `generate-token` does not acc
 
 The refresh interval defaults to 15 minutes. It cannot be set below 5 minutes to limit growth of the Gladys database, and it can be increased up to 24 hours.
 
-The general `Date format` dropdown controls all task dates. It offers ISO 8601, day/month/year, year-month-day, and month/day/year formats. Dates are formatted in UTC.
+The general `Date format` dropdown controls all task dates. It offers ISO 8601, day/month/year, year-month-day, and month/day/year formats.
 
-> After changing and saving the date format, open the affected PBS device in Gladys and save it again to apply the change.
+The `Time zone` field sets the zone dates are shown in, as an IANA name such as `Europe/Paris` (summer and winter time are handled). It defaults to `UTC`; an empty or unknown value also falls back to UTC. In ISO 8601, a zone other than UTC adds its offset, for example `2026-09-23T23:30:01+02:00`.
+
+> After changing and saving the date format or the time zone, open the affected PBS device in Gladys and save it again to apply the change.
 
 ## Exposed features
 
@@ -51,12 +53,12 @@ These require Gladys **5.1.0** or later. They only read PBS: no button, trigger,
 
 Add them from the dashboard editor, in the widget list of this integration.
 
-| Widget        | Settings      | Content                                                                                                                                 |
-| ------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| PBS datastore | One datastore | Usage gauge, used space, total size, snapshot count, 30-day usage chart, last backup and last verify/GC/prune status, `Refresh` button. |
-| PBS backups   | None          | Datastore count, stale backups, failed tasks, fullest datastore, one status row per datastore (up to 10), `Refresh` button.             |
+| Widget        | Settings      | Content                                                                                                                                      |
+| ------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| PBS datastore | One datastore | Usage gauge, free space, snapshot count, 30-day usage chart, last backup, used / total space, last verify/GC/prune status, `Refresh` button. |
+| PBS backups   | None          | Usage of the fullest datastore, stale backups, failed tasks, one status row per datastore (up to 10), `Refresh` button.                      |
 
-Capacity tiles and the chart follow the device states live. The status rows are updated after each refresh. The `Refresh` button reads PBS again right away.
+The snapshot tile and the chart follow the device states live. The other tiles and the status rows are updated after each refresh. The `Refresh` button reads PBS again right away.
 
 ### Scene triggers
 

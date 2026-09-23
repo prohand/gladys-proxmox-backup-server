@@ -5,7 +5,22 @@ export const DEFAULT_CONFIG = {
   poll_frequency: 900,
   verify_tls: true,
   date_format: 'iso',
+  timezone: 'UTC',
 };
+
+/**
+ * An IANA time zone name (`Europe/Paris`) as `Intl` accepts it, or UTC when the
+ * value is empty or unknown, so a typo never breaks the refresh.
+ */
+export function normalizeTimeZone(value) {
+  const zone = String(value ?? '').trim();
+  if (!zone) return DEFAULT_CONFIG.timezone;
+  try {
+    return new Intl.DateTimeFormat('en-US', { timeZone: zone }).resolvedOptions().timeZone;
+  } catch {
+    return DEFAULT_CONFIG.timezone;
+  }
+}
 
 function normalizePollFrequency(value) {
   const parsed = Number(value);
@@ -31,5 +46,6 @@ export function normalizeConfig(raw = {}) {
     poll_frequency: normalizePollFrequency(source.poll_frequency ?? DEFAULT_CONFIG.poll_frequency),
     verify_tls: source.verify_tls !== false,
     date_format: String(source.date_format ?? DEFAULT_CONFIG.date_format).trim() || 'iso',
+    timezone: normalizeTimeZone(source.timezone),
   };
 }

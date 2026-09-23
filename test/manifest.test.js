@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { DEFAULT_CONFIG } from '../src/config.js';
 import { summarizeDatastore } from '../src/datastores.js';
 import {
   backupReportOutputs,
@@ -39,6 +40,9 @@ test('manifest describes a read-only device integration', async () => {
     dateFormat.options.map(({ value }) => value),
     ['iso', 'DD/MM/YYYY HH:mm:ss', 'YYYY-MM-DD HH:mm:ss', 'MM/DD/YYYY HH:mm:ss'],
   );
+  const timezone = manifest.config_schema.find(({ key }) => key === 'timezone');
+  assert.equal(timezone.type, 'string');
+  assert.equal(timezone.default, DEFAULT_CONFIG.timezone);
 });
 
 async function readManifest() {

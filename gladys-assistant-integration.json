@@ -6,14 +6,11 @@
     "en": "Read-only monitoring of Proxmox Backup Server datastores and maintenance tasks.",
     "fr": "Supervision en lecture seule des datastores et tâches de maintenance Proxmox Backup Server."
   },
-  "version": "2.0.0",
-  "docker_image": "ghcr.io/prohand/gladys-proxmox-backup-server:2.0.0",
+  "version": "2.0.2",
+  "docker_image": "ghcr.io/prohand/gladys-proxmox-backup-server:2.0.2",
   "gladys_version": ">=5.1.0",
   "cover_image": "https://raw.githubusercontent.com/prohand/gladys-proxmox-backup-server/main/cover.png",
-  "categories": [
-    "services",
-    "network"
-  ],
+  "categories": ["services", "network"],
   "config_schema": [
     {
       "key": "intro",
@@ -111,8 +108,8 @@
         "fr": "Format de date"
       },
       "description": {
-        "en": "Select how task dates are displayed. Dates are displayed in UTC.",
-        "fr": "Sélectionnez le format d'affichage des dates des tâches. Les dates sont affichées en UTC."
+        "en": "Select how task dates are displayed, in the time zone set below.",
+        "fr": "Sélectionnez le format d'affichage des dates des tâches, dans le fuseau horaire indiqué ci-dessous."
       },
       "display": "dropdown",
       "options": [
@@ -147,6 +144,20 @@
       ],
       "required": false,
       "default": "iso"
+    },
+    {
+      "key": "timezone",
+      "type": "string",
+      "label": {
+        "en": "Time zone",
+        "fr": "Fuseau horaire"
+      },
+      "description": {
+        "en": "IANA name used to display dates, for example Europe/Paris. Empty or unknown: UTC.",
+        "fr": "Nom IANA utilisé pour afficher les dates, par exemple Europe/Paris. Vide ou inconnu : UTC."
+      },
+      "required": false,
+      "default": "UTC"
     }
   ],
   "actions": [
