@@ -15,6 +15,8 @@ All notable changes to this integration are documented here. The format follows
 
 ### Fixed
 
+- `Time zone` setting (IANA name, for example `Europe/Paris`): task and backup dates were
+  always shown in UTC, two hours behind in French summer time. Defaults to `UTC`.
 - The Release workflow runs Prettier on the manifest after `jq`, so the release commit no
   longer fails the CI format check.
 

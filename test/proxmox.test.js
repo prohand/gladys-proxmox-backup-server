@@ -30,6 +30,24 @@ test('formatTaskDate supports ISO and configurable UTC tokens', () => {
   assert.equal(formatTaskDate(20, 'YYYY-MM-DD HH:mm:ss'), '1970-01-01 00:00:20');
 });
 
+test('formatTaskDate shows dates in the configured time zone', () => {
+  // 2026-09-23 21:30:01 UTC: a prune that ended at 23:30:01 in Paris (summer time).
+  const summer = Date.UTC(2026, 8, 23, 21, 30, 1) / 1000;
+  assert.equal(
+    formatTaskDate(summer, 'DD/MM/YYYY HH:mm:ss', 'Europe/Paris'),
+    '23/09/2026 23:30:01',
+  );
+  assert.equal(formatTaskDate(summer, 'iso', 'Europe/Paris'), '2026-09-23T23:30:01+02:00');
+  // Winter time, and a change of day.
+  const winter = Date.UTC(2026, 11, 31, 23, 30, 0) / 1000;
+  assert.equal(
+    formatTaskDate(winter, 'YYYY-MM-DD HH:mm:ss', 'Europe/Paris'),
+    '2027-01-01 00:30:00',
+  );
+  assert.equal(formatTaskDate(winter, 'iso', 'America/New_York'), '2026-12-31T18:30:00-05:00');
+  assert.equal(formatTaskDate(winter, 'iso', 'UTC'), '2026-12-31T23:30:00.000Z');
+});
+
 test('taskDetails selects the newest matching task', () => {
   const tasks = [
     { worker_type: 'verifyjob', status: 'old', endtime: 10 },

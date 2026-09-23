@@ -5,6 +5,7 @@ import {
   MAX_POLL_FREQUENCY_SECONDS,
   MIN_POLL_FREQUENCY_SECONDS,
   normalizeConfig,
+  normalizeTimeZone,
 } from '../src/config.js';
 
 test('normalizes URL and form values', () => {
@@ -15,6 +16,7 @@ test('normalizes URL and form values', () => {
       poll_frequency: MIN_POLL_FREQUENCY_SECONDS,
       verify_tls: false,
       date_format: 'iso',
+      timezone: 'UTC',
       base_url: 'https://pbs:8007',
       api_token_id: '',
       api_token_secret: '',
@@ -38,4 +40,11 @@ test('normalizes the configured date format', () => {
     'DD/MM/YYYY HH:mm:ss',
   );
   assert.equal(normalizeConfig({ date_format: ' ' }).date_format, 'iso');
+});
+
+test('keeps a valid time zone and falls back to UTC otherwise', () => {
+  assert.equal(normalizeConfig({ timezone: ' Europe/Paris ' }).timezone, 'Europe/Paris');
+  assert.equal(normalizeTimeZone(''), 'UTC');
+  assert.equal(normalizeTimeZone(undefined), 'UTC');
+  assert.equal(normalizeTimeZone('Mars/Olympus'), 'UTC');
 });
