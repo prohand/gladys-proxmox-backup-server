@@ -108,8 +108,8 @@
         "fr": "Format de date"
       },
       "description": {
-        "en": "Select how task dates are displayed. Dates are displayed in UTC.",
-        "fr": "Sélectionnez le format d'affichage des dates des tâches. Les dates sont affichées en UTC."
+        "en": "Select how task dates are displayed, in the time zone set below.",
+        "fr": "Sélectionnez le format d'affichage des dates des tâches, dans le fuseau horaire indiqué ci-dessous."
       },
       "display": "dropdown",
       "options": [
@@ -144,6 +144,20 @@
       ],
       "required": false,
       "default": "iso"
+    },
+    {
+      "key": "timezone",
+      "type": "string",
+      "label": {
+        "en": "Time zone",
+        "fr": "Fuseau horaire"
+      },
+      "description": {
+        "en": "IANA name used to display dates, for example Europe/Paris. Empty or unknown: UTC.",
+        "fr": "Nom IANA utilisé pour afficher les dates, par exemple Europe/Paris. Vide ou inconnu : UTC."
+      },
+      "required": false,
+      "default": "UTC"
     }
   ],
   "actions": [

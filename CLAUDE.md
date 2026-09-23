@@ -58,7 +58,8 @@ Run all three locally before pushing; formatting is a hard CI gate.
 - Business logic lives in pure, exported functions taking explicit `now`/`dateFormat`
   arguments, and `createRuntime()` takes its I/O as injected dependencies, so tests need
   neither a clock, a network, nor a Gladys instance. Keep `index.js` thin.
-- Task dates are formatted in **UTC** — both `formatTaskDate` branches use `getUTC*`.
+- Task dates are formatted in the configured `timezone` (IANA name, default `UTC`, invalid → UTC) through
+  `Intl.DateTimeFormat` — no date library. ISO keeps `toISOString()` in UTC and adds the offset otherwise.
 
 ## Reading PBS efficiently
 
