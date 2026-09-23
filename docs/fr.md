@@ -57,6 +57,51 @@ Les trois valeurs de capacité (`Usage`, `Total size` et `Used space`) sont ratt
 | Last prune date                | Texte       | Date du dernier prune, au format configuré.                                         |
 | Backup stale (> 26 h)          | `0` ou `1`  | `1` lorsqu'aucun snapshot n'existe ou que le plus récent date de plus de 26 heures. |
 
+## Widgets, déclencheurs et actions de scène (Gladys 5.1)
+
+Ces fonctions demandent Gladys **5.1.0** ou plus récent. Elles lisent PBS uniquement : aucun bouton, déclencheur ou action ne peut lancer, modifier ou supprimer quoi que ce soit sur le serveur.
+
+### Widgets du tableau de bord
+
+Ajoutez-les depuis l'édition du tableau de bord, dans la liste des widgets de cette intégration.
+
+| Widget          | Réglages     | Contenu                                                                                                                                                                                 |
+| --------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Datastore PBS   | Un datastore | Jauge d'utilisation, espace utilisé, taille totale, nombre de snapshots, courbe d'utilisation sur 30 jours, dernière sauvegarde et dernier statut verify/GC/prune, bouton `Actualiser`. |
+| Sauvegardes PBS | Aucun        | Nombre de datastores, sauvegardes trop anciennes, tâches en échec, datastore le plus plein, une ligne d'état par datastore (10 au maximum), bouton `Actualiser`.                        |
+
+Les tuiles de capacité et la courbe suivent les états de l'appareil en direct. Les lignes d'état sont mises à jour après chaque rafraîchissement. Le bouton `Actualiser` relit PBS tout de suite.
+
+### Déclencheurs de scène
+
+Ils apparaissent dans l'éditeur de scène, dans la catégorie « Intégrations ». Chaque filtre est facultatif : laissez-le vide pour accepter toutes les valeurs.
+
+| Déclencheur                       | Se déclenche quand                                                      | Filtres                            | Variables                                                 |
+| --------------------------------- | ----------------------------------------------------------------------- | ---------------------------------- | --------------------------------------------------------- |
+| Tâche de maintenance PBS terminée | Une tâche de vérification, de garbage collection ou de prune est finie. | Datastore, type de tâche, résultat | `datastore_name`, `task_type`, `result`, `status`, `date` |
+| Nouvelle sauvegarde PBS           | Un snapshot plus récent est apparu sur le datastore.                    | Datastore                          | `datastore_name`, `last_backup`, `snapshot_count`         |
+| Sauvegarde PBS trop ancienne      | Le snapshot le plus récent vient de dépasser 26 heures.                 | Datastore                          | `datastore_name`, `last_backup`, `hours_since_backup`     |
+| PBS injoignable                   | Une lecture de datastore a échoué (une fois par panne).                 | Datastore                          | `datastore_name`, `error`                                 |
+| PBS de nouveau joignable          | Une lecture de datastore a réussi après un échec.                       | Datastore                          | `datastore_name`                                          |
+
+`result` vaut `ok`, `warning` ou `error` ; `status` est le statut brut de PBS, par exemple `OK`, `WARNINGS: 2` ou le texte de l'erreur.
+
+- Un déclencheur part **une seule fois par changement**, jamais à chaque rafraîchissement. Exemple : une sauvegarde qui reste trop ancienne ne déclenche `Sauvegarde PBS trop ancienne` qu'une fois.
+- Les changements sont détectés par le rafraîchissement planifié (l'intervalle de rafraîchissement). Une lecture demandée par un widget ou une action de scène ne déclenche jamais rien elle-même ; le rafraîchissement planifié suivant signale le changement.
+- Le premier rafraîchissement après un démarrage ou un changement de configuration ne déclenche rien : il sert de point de départ.
+- Si plusieurs tâches du même type se terminent entre deux rafraîchissements, seule la plus récente est signalée.
+
+### Actions de scène
+
+| Action                                 | Champs                                                                  | Sorties                                                                                                                                                                                                                                             |
+| -------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lire l'état d'un datastore PBS         | Datastore (obligatoire), `Lire PBS maintenant` (désactivé par défaut)   | `datastore_name`, `usage_percent`, `used_gb`, `total_gb`, `snapshot_count`, `backup_stale`, `last_backup`, `hours_since_backup`, `last_verify_status`, `last_verify_date`, `last_gc_status`, `last_gc_date`, `last_prune_status`, `last_prune_date` |
+| Obtenir le rapport des sauvegardes PBS | `Lire PBS maintenant` (désactivé par défaut), langue du rapport (en/fr) | `datastore_count`, `stale_count`, `failed_task_count`, `unreachable_count`, `max_usage_percent`, `all_ok`, `summary`                                                                                                                                |
+
+- Sans `Lire PBS maintenant`, l'action répond avec les valeurs du dernier rafraîchissement et ne sollicite pas PBS.
+- `summary` est un texte prêt à envoyer, une ligne par datastore. Exemple de rapport quotidien : « Tous les jours à 8 h » → « Obtenir le rapport des sauvegardes PBS » (langue `fr`) → « Envoyer un message » avec la sortie `summary`.
+- Exemple d'alerte : « Tâche de maintenance PBS terminée » filtrée sur le résultat `Erreur` → « Envoyer un message » : `Échec de {{triggerEvent.data.task_type}} sur {{triggerEvent.data.datastore_name}} : {{triggerEvent.data.status}}`.
+
 ## Détails de fonctionnement
 
 - Le nombre de snapshots et la fraîcheur des sauvegardes sont lus depuis les groupes de sauvegarde du datastore (`backup-count` et `last-backup`) : un datastore contenant des milliers de snapshots ne coûte qu'une petite réponse par rafraîchissement. Si une version de PBS n'expose pas ces compteurs, l'intégration revient à la liste complète des snapshots.
