@@ -1,9 +1,14 @@
 import { WIDGET_COLORS } from '@gladysassistant/integration-sdk';
 
 // Dashboard widgets declared in the manifest (Gladys 5.1). The integration only
-// describes the content; Gladys renders it. Capacity tiles and the chart are
+// describes the content; Gladys renders it. The chart and the snapshot tile are
 // bound to the device features, so they follow the published states live; the
-// status rows come from the last refresh and are re-pulled after each one.
+// other tiles and the status rows come from the last refresh and are re-pulled
+// after each one.
+//
+// The card lays its tiles out three per row: both widgets send exactly three so
+// no tile is left alone on a row, and format their numbers themselves (rounded,
+// localized) instead of showing the two decimals of the raw states.
 
 export const WIDGETS = {
   DATASTORE: 'datastore',
@@ -57,6 +62,35 @@ function withDate(text, date) {
   return { en: `${text.en} · ${short}`, fr: `${text.fr} · ${short}` };
 }
 
+// A number with at most `digits` decimals, trailing zeros dropped, in both
+// decimal separators.
+function decimal(number, digits) {
+  const value = String(Number(number.toFixed(digits)));
+  return { en: value, fr: value.replace('.', ',') };
+}
+
+// A size in GB split for a tile: `883` `Go` below 1 TB, `2,88` `To` above.
+function sizeParts(gb) {
+  if (gb >= 1000) return { value: decimal(gb / 1000, 2), unit: { en: 'TB', fr: 'To' } };
+  return { value: decimal(gb, gb < 10 ? 1 : 0), unit: { en: 'GB', fr: 'Go' } };
+}
+
+/** A size in GB as short localized text: `883 Go` below 1 TB, `2,88 To` above. */
+export function formatSize(gb) {
+  const { value, unit } = sizeParts(gb);
+  return { en: `${value.en} ${unit.en}`, fr: `${value.fr} ${unit.fr}` };
+}
+
+function spaceItem(summary) {
+  const used = formatSize(summary.usedGb);
+  const total = formatSize(summary.totalGb);
+  return {
+    label: { en: 'Used space', fr: 'Espace utilisé' },
+    value: { en: `${used.en} / ${total.en}`, fr: `${used.fr} / ${total.fr}` },
+    color: usageColor(summary.usagePercent),
+  };
+}
+
 function taskItem(type, task) {
   const result = RESULTS[task.result] ?? RESULTS.error;
   return {
@@ -87,7 +121,7 @@ export function datastoreWidgetContent(gladys, summary) {
       {
         type: 'gauge',
         label: { en: 'Usage', fr: 'Utilisation' },
-        device_feature: ids.feature('usage'),
+        value: Math.round(summary.usagePercent),
         min: 0,
         max: 100,
         unit: '%',
@@ -95,15 +129,9 @@ export function datastoreWidgetContent(gladys, summary) {
       },
       {
         type: 'value',
-        label: { en: 'Used', fr: 'Utilisé' },
-        device_feature: ids.feature('used'),
+        label: { en: 'Free', fr: 'Libre' },
+        ...sizeParts(Math.max(0, summary.totalGb - summary.usedGb)),
         icon: 'hard-drive',
-      },
-      {
-        type: 'value',
-        label: { en: 'Total', fr: 'Total' },
-        device_feature: ids.feature('total'),
-        icon: 'database',
       },
       {
         type: 'value',
@@ -122,6 +150,7 @@ export function datastoreWidgetContent(gladys, summary) {
         type: 'status',
         items: [
           backupItem(summary),
+          spaceItem(summary),
           ...Object.entries(summary.tasks).map(([type, task]) => taskItem(type, task)),
         ],
       },
@@ -178,7 +207,7 @@ export function overviewWidgetContent(summaries, failures = new Map()) {
       total + Object.values(summary.tasks).filter((task) => task.result === 'error').length,
     0,
   );
-  const maxUsage = Math.max(0, ...summaries.map((summary) => summary.usagePercent));
+  const maxUsage = Math.round(Math.max(0, ...summaries.map((summary) => summary.usagePercent)));
   const items = [
     ...summaries.map(overviewItem),
     ...[...failures.keys()].map((store) => ({
@@ -190,15 +219,19 @@ export function overviewWidgetContent(summaries, failures = new Map()) {
   return {
     ttl_seconds: WIDGET_TTL_SECONDS,
     components: [
+      // The status rows already list every datastore: no count tile.
       {
-        type: 'value',
-        label: { en: 'Datastores', fr: 'Datastores' },
-        value: summaries.length + failures.size,
-        icon: 'database',
+        type: 'gauge',
+        label: { en: 'Max usage', fr: 'Utilisation max' },
+        value: maxUsage,
+        min: 0,
+        max: 100,
+        unit: '%',
+        color: usageColor(maxUsage),
       },
       {
         type: 'value',
-        label: { en: 'Stale backups', fr: 'Sauvegardes anciennes' },
+        label: { en: 'Stale backups', fr: 'Sauv. en retard' },
         value: staleCount,
         icon: 'clock',
         color: staleCount ? WIDGET_COLORS.DANGER : WIDGET_COLORS.SUCCESS,
@@ -209,15 +242,6 @@ export function overviewWidgetContent(summaries, failures = new Map()) {
         value: failedTaskCount,
         icon: 'alert-triangle',
         color: failedTaskCount ? WIDGET_COLORS.DANGER : WIDGET_COLORS.SUCCESS,
-      },
-      {
-        type: 'gauge',
-        label: { en: 'Fullest datastore', fr: 'Datastore le + plein' },
-        value: maxUsage,
-        min: 0,
-        max: 100,
-        unit: '%',
-        color: usageColor(maxUsage),
       },
       // The status list holds at most 10 rows: the core drops the rest.
       ...(items.length ? [{ type: 'status', items: items.slice(0, 10) }] : []),

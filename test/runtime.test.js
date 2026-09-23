@@ -469,6 +469,7 @@ test('both widgets resolve content the Gladys core renders as sent', async () =>
     status.items.map(({ value }) => value.fr ?? value),
     [
       new Date((NOW / 1000 - 3600) * 1000).toISOString(),
+      '0,5 Go / 1 Go',
       'Avertissements · 2023-11-14T22:13:20Z',
       'OK · 2023-11-14T22:13:20Z',
       'En cours · 2023-11-14T22:13:20Z',
