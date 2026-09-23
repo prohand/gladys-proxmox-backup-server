@@ -9,6 +9,7 @@ import {
   TASK_MAX_PAGES,
   TASK_PAGE_SIZE,
   taskDetails,
+  taskResult,
 } from '../src/proxmox.js';
 
 test('newestBackupEpoch accepts PBS group and snapshot fields', () => {
@@ -38,12 +39,42 @@ test('taskDetails selects the newest matching task', () => {
   assert.deepEqual(taskDetails(tasks, 'verify'), {
     status: 'OK',
     date: '1970-01-01T00:00:20.000Z',
+    result: 'ok',
+    id: 'verificationjob:20',
   });
   assert.deepEqual(taskDetails(tasks, 'prune'), {
     status: 'OK',
     date: '1970-01-01T00:00:30.000Z',
+    result: 'ok',
+    id: 'prune:30',
   });
-  assert.deepEqual(taskDetails(tasks, 'gc'), { status: 'Never run', date: 'Never run' });
+  assert.deepEqual(taskDetails(tasks, 'gc'), {
+    status: 'Never run',
+    date: 'Never run',
+    result: 'never',
+    id: null,
+  });
+});
+
+test('taskDetails identifies a run by its UPID', () => {
+  const upid = 'UPID:pbs:00001234:0000ABCD:00000001:66C0FFEE:garbage_collection:store1:root@pam:';
+  assert.equal(
+    taskDetails([{ worker_type: 'garbage_collection', upid, status: 'OK', endtime: 5 }], 'gc').id,
+    upid,
+  );
+});
+
+test('taskResult reduces PBS statuses to ok, warning, error, or running', () => {
+  assert.equal(taskResult(undefined), 'never');
+  assert.equal(taskResult({ starttime: 1 }), 'running');
+  assert.equal(taskResult({ starttime: 1, endtime: 2 }), 'ok');
+  assert.equal(taskResult({ status: 'OK', endtime: 2 }), 'ok');
+  assert.equal(taskResult({ status: 'WARNINGS: 3', endtime: 2 }), 'warning');
+  assert.equal(taskResult({ status: 'unknown', endtime: 2 }), 'error');
+  assert.equal(
+    taskResult({ status: 'verification failed - please check the log', endtime: 2 }),
+    'error',
+  );
 });
 
 test('fetchTasks pages until every task type has been seen', async () => {

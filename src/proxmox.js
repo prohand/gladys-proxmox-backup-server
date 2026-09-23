@@ -138,16 +138,33 @@ export function formatTaskDate(epoch, format = 'iso') {
   return format.replace(/YYYY|MM|DD|HH|mm|ss/g, (token) => tokens[token]);
 }
 
+/**
+ * Outcome of a PBS task, reduced to what a dashboard or a scene can act on.
+ * PBS reports `OK`, `WARNINGS: n`, or the error text itself; a task without
+ * an end time is still running.
+ */
+export function taskResult(task) {
+  if (!task) return 'never';
+  if (task.status === undefined || task.status === null) return task.endtime ? 'ok' : 'running';
+  const status = String(task.status);
+  if (status === 'OK') return 'ok';
+  if (/^warnings?\b/i.test(status)) return 'warning';
+  return 'error';
+}
+
 export function taskDetails(tasks, type, dateFormat = 'iso') {
   const task = tasks
     .filter((item) => TASK_TYPE_ALIASES[type].includes(workerType(item)))
     .sort(
       (a, b) => Number(b.endtime ?? b.starttime ?? 0) - Number(a.endtime ?? a.starttime ?? 0),
     )[0];
-  if (!task) return { status: 'Never run', date: 'Never run' };
+  if (!task) return { status: 'Never run', date: 'Never run', result: 'never', id: null };
   const status = task.status ?? (task.endtime ? 'OK' : 'running');
   const date = formatTaskDate(task.endtime ?? task.starttime, dateFormat);
-  return { status, date };
+  // The UPID identifies one run; it is what tells a new task from the one
+  // already reported when the scene triggers compare two refreshes.
+  const id = String(task.upid ?? `${workerType(task)}:${task.starttime ?? task.endtime}`);
+  return { status, date, result: taskResult(task), id };
 }
 
 export function newestBackupEpoch(entries) {

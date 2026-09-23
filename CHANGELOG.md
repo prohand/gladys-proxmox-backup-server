@@ -8,6 +8,15 @@ All notable changes to this integration are documented here. The format follows
 
 ### Added
 
+- Gladys 5.1 dashboard widgets: `PBS datastore` (one datastore in detail, with a live usage
+  gauge and a 30-day chart) and `PBS backups` (every datastore on one card), each with a
+  `Refresh` button that reads PBS again.
+- Gladys 5.1 scene triggers, fired once per change: maintenance task finished (filter on
+  datastore, task type, and result), new backup, backup stale, PBS unreachable, and PBS
+  reachable again.
+- Gladys 5.1 scene actions: get a datastore status (usage, snapshots, last tasks) and get a
+  backup report with counters and a ready-to-send text in English or French.
+
 - `CLAUDE.md` contributor guide.
 - `CHANGELOG.md` and a Dependabot configuration for npm, Docker, and GitHub Actions.
 - `npm run check:pbs`, a read-only diagnostic script reporting which inventory route each
@@ -16,6 +25,8 @@ All notable changes to this integration are documented here. The format follows
   retry after a failed refresh, and the startup backoff.
 
 ### Changed
+
+- Requires Gladys 5.1.0 or later (`gladys_version`), and the integration SDK 0.14.
 
 - Snapshot count and backup freshness are read from the datastore backup groups instead of
   the full snapshot list, which avoids downloading megabytes of JSON on every refresh.

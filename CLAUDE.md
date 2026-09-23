@@ -31,15 +31,18 @@ Run all three locally before pushing; formatting is a hard CI gate.
 
 ## Layout
 
-| Path                                | Role                                                                                                                                                         |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `index.js`                          | SDK bootstrap and lifecycle: `onScanRequest`, `onPoll`, `onAction`, `onConfigUpdated`, `connected`. Holds the mutable `config` and the two in-memory maps.   |
-| `src/config.js`                     | `normalizeConfig()` — coerces raw manifest config, clamps `poll_frequency` to 300…86400 s.                                                                   |
-| `src/proxmox.js`                    | `ProxmoxClient` (raw `node:http`/`node:https`, no HTTP dependency) plus pure helpers: `formatTaskDate`, `taskDetails`, `taskSummary`, `newestSnapshotEpoch`. |
-| `src/datastores.js`                 | Device/feature definitions (`buildDatastoreDevice`), state mapping (`buildDatastoreStates`), polling gate (`isPollDue`), orchestration (`readDatastore`).    |
-| `gladys-assistant-integration.json` | Manifest: version, `docker_image`, bilingual `config_schema`, actions. Version and image tag are bumped **only** by `release.yml`.                           |
-| `docs/en.md`, `docs/fr.md`          | User-facing setup guides — kept in sync, both languages.                                                                                                     |
-| `test/`                             | One `*.test.js` per source file, plus `manifest.test.js` which asserts manifest invariants.                                                                  |
+| Path                                | Role                                                                                                                                                                                   |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index.js`                          | SDK bootstrap and lifecycle: `onScanRequest`, `onPoll`, `onAction`, `onConfigUpdated`, `connected`. Holds the mutable `config` and the two in-memory maps.                             |
+| `src/config.js`                     | `normalizeConfig()` — coerces raw manifest config, clamps `poll_frequency` to 300…86400 s.                                                                                             |
+| `src/proxmox.js`                    | `ProxmoxClient` (raw `node:http`/`node:https`, no HTTP dependency) plus pure helpers: `formatTaskDate`, `taskDetails`, `taskSummary`, `newestSnapshotEpoch`.                           |
+| `src/datastores.js`                 | Device/feature definitions (`buildDatastoreDevice`), `summarizeDatastore` (the one object states, widgets and scenes are built from), `datastoreStates`, `isPollDue`, `readDatastore`. |
+| `src/runtime.js`                    | `createRuntime()` (injected I/O): discovery, throttled polls, the summary cache, scene events, widget and scene-action handlers; `registerRuntime()` wires them to the SDK.            |
+| `src/scenes.js`                     | Scene trigger/action keys, `detectSceneEvents` (previous vs current summary), reachability events, scene action outputs.                                                               |
+| `src/widgets.js`                    | Dashboard widget keys and content builders (`datastoreWidgetContent`, `overviewWidgetContent`) in the core widget vocabulary.                                                          |
+| `gladys-assistant-integration.json` | Manifest: version, `docker_image`, bilingual `config_schema`, actions. Version and image tag are bumped **only** by `release.yml`.                                                     |
+| `docs/en.md`, `docs/fr.md`          | User-facing setup guides — kept in sync, both languages.                                                                                                                               |
+| `test/`                             | One `*.test.js` per source file, plus `manifest.test.js` which asserts manifest invariants.                                                                                            |
 
 ## Conventions
 
@@ -77,6 +80,24 @@ the Gladys state database — do not lower it.
 `datastoreByExternalId` is rebuilt by `discover()`; an unknown `external_id` during a poll
 triggers one re-discovery before giving up. `start()` retries the initial connection with an
 exponential backoff before reporting a disconnected status.
+
+## Widgets and scenes (Gladys 5.1)
+
+The manifest declares `widgets`, `scene_triggers`, and `scene_actions`, hence `gladys_version: >=5.1.0`
+(an older core rejects the manifest). Rules to keep:
+
+- **Keys are forever**: a widget, trigger, action, field, variable, or output key is stored by users'
+  dashboards and scenes. Add, never rename; a new `required` action field needs a `default`.
+- **Events fire once per transition**, detected by the scheduled poll only (`baselineByExternalId`).
+  A refresh asked by a widget or a scene action updates the cache and the states but never fires an
+  event (no loop through a scene); the next scheduled poll reports the change.
+- Widgets and scene actions answer from `summaryByExternalId` and read PBS only when the cache is empty
+  or the user asked for it — still `GET` routes only.
+- Widget contents must pass `validateWidgetContent` (tested): 8 components, 1 focal, 6 tiles,
+  1 status, status values ≤ 40 characters.
+- `test/manifest.test.js` asserts that declared keys, variables, and outputs match the code. Validate a
+  manifest change against the core validator (`server/lib/external-integration/externalIntegration.validateManifest.js`
+  in GladysAssistant/Gladys) when adding fields.
 
 ## Release
 
