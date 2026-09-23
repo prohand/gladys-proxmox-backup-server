@@ -6,6 +6,18 @@ All notable changes to this integration are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Widgets: three tiles per card so no tile sits alone on a row; usage shown as a whole
+  percent; sizes shown in GB or TB with the local decimal separator. `PBS datastore` shows
+  the free space as a tile and used / total space as a status row; `PBS backups` drops the
+  datastore count tile (the status rows list every datastore) and shortens its French labels.
+
+### Fixed
+
+- The Release workflow runs Prettier on the manifest after `jq`, so the release commit no
+  longer fails the CI format check.
+
 ### Added
 
 - Gladys 5.1 dashboard widgets: `PBS datastore` (one datastore in detail, with a live usage

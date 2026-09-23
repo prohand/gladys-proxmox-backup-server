@@ -65,12 +65,12 @@ Ces fonctions demandent Gladys **5.1.0** ou plus récent. Elles lisent PBS uniqu
 
 Ajoutez-les depuis l'édition du tableau de bord, dans la liste des widgets de cette intégration.
 
-| Widget          | Réglages     | Contenu                                                                                                                                                                                 |
-| --------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Datastore PBS   | Un datastore | Jauge d'utilisation, espace utilisé, taille totale, nombre de snapshots, courbe d'utilisation sur 30 jours, dernière sauvegarde et dernier statut verify/GC/prune, bouton `Actualiser`. |
-| Sauvegardes PBS | Aucun        | Nombre de datastores, sauvegardes trop anciennes, tâches en échec, datastore le plus plein, une ligne d'état par datastore (10 au maximum), bouton `Actualiser`.                        |
+| Widget          | Réglages     | Contenu                                                                                                                                                                                      |
+| --------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Datastore PBS   | Un datastore | Jauge d'utilisation, espace libre, nombre de snapshots, courbe d'utilisation sur 30 jours, dernière sauvegarde, espace utilisé / total, dernier statut verify/GC/prune, bouton `Actualiser`. |
+| Sauvegardes PBS | Aucun        | Utilisation du datastore le plus plein, sauvegardes en retard, tâches en échec, une ligne d'état par datastore (10 au maximum), bouton `Actualiser`.                                         |
 
-Les tuiles de capacité et la courbe suivent les états de l'appareil en direct. Les lignes d'état sont mises à jour après chaque rafraîchissement. Le bouton `Actualiser` relit PBS tout de suite.
+La tuile snapshots et la courbe suivent les états de l'appareil en direct. Les autres tuiles et les lignes d'état sont mises à jour après chaque rafraîchissement. Le bouton `Actualiser` relit PBS tout de suite.
 
 ### Déclencheurs de scène
 
