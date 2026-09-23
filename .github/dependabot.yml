@@ -24,6 +24,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Node majors move together by hand (.nvmrc, engines, CI, Dockerfile),
+      # and only to an LTS line; odd majors like 25 are never LTS.
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: /
