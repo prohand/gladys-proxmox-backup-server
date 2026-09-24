@@ -467,12 +467,15 @@ test('both widgets resolve content the Gladys core renders as sent', async () =>
   const status = datastore.components.find(({ type }) => type === 'status');
   assert.deepEqual(
     status.items.map(({ value }) => value.fr ?? value),
+    [new Date((NOW / 1000 - 3600) * 1000).toISOString(), '0,5 Go / 1 Go'],
+  );
+  const cards = datastore.components.find(({ type }) => type === 'card-list').items;
+  assert.deepEqual(
+    cards.map(({ date, badge }) => [date, badge.text.fr]),
     [
-      new Date((NOW / 1000 - 3600) * 1000).toISOString(),
-      '0,5 Go / 1 Go',
-      'Avertissements · 2023-11-14T22:13:20Z',
-      'OK · 2023-11-14T22:13:20Z',
-      'En cours · 2023-11-14T22:13:20Z',
+      ['2023-11-14T22:13:20.000Z', 'Avertissements'],
+      ['2023-11-14T22:13:20.000Z', 'Réussie'],
+      ['2023-11-14T22:13:20.000Z', 'En cours'],
     ],
   );
   assert.deepEqual(

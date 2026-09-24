@@ -45,3 +45,30 @@ test('both widgets fill whole rows of three tiles with rounded values', () => {
   const space = datastore.components.find(({ type }) => type === 'status').items[1];
   assert.deepEqual(space.value, { en: '1.99 TB / 2.88 TB', fr: '1,99 To / 2,88 To' });
 });
+
+test('the datastore widget shows each task as a card with its date and a result badge', () => {
+  const content = datastoreWidgetContent(
+    gladys,
+    summarizeDatastore(
+      { store: 'nas', total: 100, used: 50 },
+      { snapshotCount: 1, newestBackupEpoch: NOW / 1000 },
+      [
+        { worker_type: 'verificationjob', status: 'OK', endtime: 1_788_670_020 },
+        { worker_type: 'garbage_collection', status: 'WARNINGS: 1', endtime: 1_788_670_020 },
+      ],
+      NOW,
+    ),
+  );
+  assert.deepEqual(validateWidgetContent(content), []);
+  const cards = content.components.find(({ type }) => type === 'card-list').items;
+  assert.deepEqual(cards[0], {
+    title: { en: 'Verify', fr: 'Vérification' },
+    date: '2026-09-06T04:47:00.000Z',
+    badge: { text: { en: 'Succeeded', fr: 'Réussie' }, color: 'success' },
+  });
+  assert.equal(cards[1].badge.color, 'warning');
+  assert.deepEqual(cards[2], {
+    title: { en: 'Prune', fr: 'Prune' },
+    badge: { text: { en: 'Never run', fr: 'Jamais lancée' }, color: 'neutral' },
+  });
+});

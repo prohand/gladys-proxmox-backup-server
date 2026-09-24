@@ -12,6 +12,9 @@ All notable changes to this integration are documented here. The format follows
   percent; sizes shown in GB or TB with the local decimal separator. `PBS datastore` shows
   the free space as a tile and used / total space as a status row; `PBS backups` drops the
   datastore count tile (the status rows list every datastore) and shortens its French labels.
+- `PBS datastore` widget: verify, garbage collection, and prune are shown as cards (name,
+  date formatted by Gladys, colored result badge such as `Réussie`) in place of the 30-day
+  usage chart, since a widget holds a single chart or card list.
 
 ### Fixed
 
