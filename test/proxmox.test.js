@@ -59,18 +59,21 @@ test('taskDetails selects the newest matching task', () => {
     date: '1970-01-01T00:00:20.000Z',
     result: 'ok',
     id: 'verificationjob:20',
+    epoch: 20,
   });
   assert.deepEqual(taskDetails(tasks, 'prune'), {
     status: 'OK',
     date: '1970-01-01T00:00:30.000Z',
     result: 'ok',
     id: 'prune:30',
+    epoch: 30,
   });
   assert.deepEqual(taskDetails(tasks, 'gc'), {
     status: 'Never run',
     date: 'Never run',
     result: 'never',
     id: null,
+    epoch: null,
   });
 });
 

@@ -1,9 +1,9 @@
 import { WIDGET_COLORS } from '@gladysassistant/integration-sdk';
 
 // Dashboard widgets declared in the manifest (Gladys 5.1). The integration only
-// describes the content; Gladys renders it. The chart and the snapshot tile are
-// bound to the device features, so they follow the published states live; the
-// other tiles and the status rows come from the last refresh and are re-pulled
+// describes the content; Gladys renders it. The snapshot tile is bound to its
+// device feature, so it follows the published state live; the other tiles, the
+// task cards and the status rows come from the last refresh and are re-pulled
 // after each one.
 //
 // The card lays its tiles out three per row: both widgets send exactly three so
@@ -32,10 +32,11 @@ const TASK_NAMES = {
   prune: { en: 'Prune', fr: 'Prune' },
 };
 
+// Badge texts: 16 characters at most.
 const RESULTS = {
-  ok: { en: 'OK', fr: 'OK', color: WIDGET_COLORS.SUCCESS },
+  ok: { en: 'Succeeded', fr: 'Réussie', color: WIDGET_COLORS.SUCCESS },
   warning: { en: 'Warnings', fr: 'Avertissements', color: WIDGET_COLORS.WARNING },
-  error: { en: 'Error', fr: 'Erreur', color: WIDGET_COLORS.DANGER },
+  error: { en: 'Failed', fr: 'Échouée', color: WIDGET_COLORS.DANGER },
   running: { en: 'Running', fr: 'En cours', color: WIDGET_COLORS.INFO },
   never: { en: 'Never run', fr: 'Jamais lancée', color: WIDGET_COLORS.NEUTRAL },
 };
@@ -52,14 +53,6 @@ export function usageColor(percent) {
   if (percent >= USAGE_DANGER_PERCENT) return WIDGET_COLORS.DANGER;
   if (percent >= USAGE_WARNING_PERCENT) return WIDGET_COLORS.WARNING;
   return WIDGET_COLORS.SUCCESS;
-}
-
-// A status value holds 40 characters: the milliseconds of an ISO date would
-// push "Avertissements · <date>" past it.
-function withDate(text, date) {
-  if (!date) return { en: text.en, fr: text.fr };
-  const short = date.replace(/\.\d{3}Z$/, 'Z');
-  return { en: `${text.en} · ${short}`, fr: `${text.fr} · ${short}` };
 }
 
 // A number with at most `digits` decimals, trailing zeros dropped, in both
@@ -91,12 +84,14 @@ function spaceItem(summary) {
   };
 }
 
-function taskItem(type, task) {
+// One card per task: name, end date (formatted by Gladys in the user's locale
+// and time zone), and the result as a colored badge.
+function taskCard(type, task) {
   const result = RESULTS[task.result] ?? RESULTS.error;
   return {
-    label: TASK_NAMES[type],
-    value: withDate(result, task.result === 'never' ? null : task.date),
-    color: result.color,
+    title: TASK_NAMES[type],
+    ...(task.epoch ? { date: new Date(task.epoch * 1000).toISOString() } : {}),
+    badge: { text: { en: result.en, fr: result.fr }, color: result.color },
   };
 }
 
@@ -139,21 +134,13 @@ export function datastoreWidgetContent(gladys, summary) {
         device_feature: ids.feature('snapshots'),
         icon: 'layers',
       },
+      // One focal component per card: the task cards take the place of a chart.
       {
-        type: 'chart',
-        title: { en: 'Usage', fr: 'Utilisation' },
-        chart_type: 'area',
-        device_features: [ids.feature('usage')],
-        interval: 'last-month',
+        type: 'card-list',
+        display: 'list',
+        items: Object.entries(summary.tasks).map(([type, task]) => taskCard(type, task)),
       },
-      {
-        type: 'status',
-        items: [
-          backupItem(summary),
-          spaceItem(summary),
-          ...Object.entries(summary.tasks).map(([type, task]) => taskItem(type, task)),
-        ],
-      },
+      { type: 'status', items: [backupItem(summary), spaceItem(summary)] },
       REFRESH_BUTTON,
     ],
   };

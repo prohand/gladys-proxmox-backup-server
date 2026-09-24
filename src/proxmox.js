@@ -204,13 +204,17 @@ export function taskDetails(tasks, type, dateFormat = 'iso', timeZone = 'UTC') {
     .sort(
       (a, b) => Number(b.endtime ?? b.starttime ?? 0) - Number(a.endtime ?? a.starttime ?? 0),
     )[0];
-  if (!task) return { status: 'Never run', date: 'Never run', result: 'never', id: null };
+  if (!task) {
+    return { status: 'Never run', date: 'Never run', result: 'never', id: null, epoch: null };
+  }
   const status = task.status ?? (task.endtime ? 'OK' : 'running');
-  const date = formatTaskDate(task.endtime ?? task.starttime, dateFormat, timeZone);
+  const epoch = Number(task.endtime ?? task.starttime);
+  const date = formatTaskDate(epoch, dateFormat, timeZone);
   // The UPID identifies one run; it is what tells a new task from the one
   // already reported when the scene triggers compare two refreshes.
   const id = String(task.upid ?? `${workerType(task)}:${task.starttime ?? task.endtime}`);
-  return { status, date, result: taskResult(task), id };
+  // The raw epoch lets a widget hand Gladys an ISO date it formats itself.
+  return { status, date, result: taskResult(task), id, epoch };
 }
 
 export function newestBackupEpoch(entries) {

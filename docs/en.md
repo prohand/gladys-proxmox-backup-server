@@ -53,12 +53,12 @@ These require Gladys **5.1.0** or later. They only read PBS: no button, trigger,
 
 Add them from the dashboard editor, in the widget list of this integration.
 
-| Widget        | Settings      | Content                                                                                                                                      |
-| ------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| PBS datastore | One datastore | Usage gauge, free space, snapshot count, 30-day usage chart, last backup, used / total space, last verify/GC/prune status, `Refresh` button. |
-| PBS backups   | None          | Usage of the fullest datastore, stale backups, failed tasks, one status row per datastore (up to 10), `Refresh` button.                      |
+| Widget        | Settings      | Content                                                                                                                                                |
+| ------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| PBS datastore | One datastore | Usage gauge, free space, snapshot count, one card per verify/GC/prune task (date and result badge), last backup, used / total space, `Refresh` button. |
+| PBS backups   | None          | Usage of the fullest datastore, stale backups, failed tasks, one status row per datastore (up to 10), `Refresh` button.                                |
 
-The snapshot tile and the chart follow the device states live. The other tiles and the status rows are updated after each refresh. The `Refresh` button reads PBS again right away.
+The snapshot tile follows the device state live. The other tiles, the task cards, and the status rows are updated after each refresh. The `Refresh` button reads PBS again right away.
 
 ### Scene triggers
 
