@@ -72,3 +72,13 @@ test('the datastore widget shows each task as a card with its date and a result 
     badge: { text: { en: 'Never run', fr: 'Jamais lancée' }, color: 'neutral' },
   });
 });
+
+test('the datastore widget can hide its three tiles', () => {
+  const content = datastoreWidgetContent(gladys, summary(), { showTiles: false });
+  assert.deepEqual(validateWidgetContent(content), []);
+  assert.equal(tiles(content).length, 0);
+  assert.deepEqual(
+    content.components.map(({ type }) => type),
+    ['text', 'card-list', 'status', 'button'],
+  );
+});
