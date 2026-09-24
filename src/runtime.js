@@ -163,7 +163,11 @@ export function createRuntime(gladys, dependencies = {}) {
     const externalId = settings.datastore;
     const store = externalId && (await resolveStore(externalId));
     if (!store) return missingDatastoreContent();
-    return datastoreWidgetContent(gladys, await cachedOrRefresh(externalId, store));
+    // Absent on widgets added before the setting existed: tiles stay shown.
+    const showTiles = settings.show_tiles !== false && settings.show_tiles !== 'false';
+    return datastoreWidgetContent(gladys, await cachedOrRefresh(externalId, store), {
+      showTiles,
+    });
   }
 
   async function overviewWidget() {

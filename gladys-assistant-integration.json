@@ -192,6 +192,16 @@
             "fr": "Datastore"
           },
           "required": true
+        },
+        {
+          "key": "show_tiles",
+          "type": "boolean",
+          "label": {
+            "en": "Show usage, free space and snapshot tiles",
+            "fr": "Afficher les tuiles utilisation, espace libre et snapshots"
+          },
+          "required": false,
+          "default": true
         }
       ],
       "action_timeout_seconds": 60

@@ -106,34 +106,40 @@ function backupItem(summary) {
   };
 }
 
-/** Content of the `datastore` widget: one datastore in detail. */
-export function datastoreWidgetContent(gladys, summary) {
+/**
+ * Content of the `datastore` widget: one datastore in detail. `showTiles`
+ * (widget setting `show_tiles`) hides the usage, free space and snapshot tiles.
+ */
+export function datastoreWidgetContent(gladys, summary, { showTiles = true } = {}) {
   const ids = gladys.externalIds('pbs-datastore', summary.store);
+  const tiles = [
+    {
+      type: 'gauge',
+      label: { en: 'Usage', fr: 'Utilisation' },
+      value: Math.round(summary.usagePercent),
+      min: 0,
+      max: 100,
+      unit: '%',
+      color: usageColor(summary.usagePercent),
+    },
+    {
+      type: 'value',
+      label: { en: 'Free', fr: 'Libre' },
+      ...sizeParts(Math.max(0, summary.totalGb - summary.usedGb)),
+      icon: 'hard-drive',
+    },
+    {
+      type: 'value',
+      label: { en: 'Snapshots', fr: 'Snapshots' },
+      device_feature: ids.feature('snapshots'),
+      icon: 'layers',
+    },
+  ];
   return {
     ttl_seconds: WIDGET_TTL_SECONDS,
     components: [
       { type: 'text', variant: 'heading', text: summary.store },
-      {
-        type: 'gauge',
-        label: { en: 'Usage', fr: 'Utilisation' },
-        value: Math.round(summary.usagePercent),
-        min: 0,
-        max: 100,
-        unit: '%',
-        color: usageColor(summary.usagePercent),
-      },
-      {
-        type: 'value',
-        label: { en: 'Free', fr: 'Libre' },
-        ...sizeParts(Math.max(0, summary.totalGb - summary.usedGb)),
-        icon: 'hard-drive',
-      },
-      {
-        type: 'value',
-        label: { en: 'Snapshots', fr: 'Snapshots' },
-        device_feature: ids.feature('snapshots'),
-        icon: 'layers',
-      },
+      ...(showTiles ? tiles : []),
       // One focal component per card: the task cards take the place of a chart.
       {
         type: 'card-list',

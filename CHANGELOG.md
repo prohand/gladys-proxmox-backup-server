@@ -6,6 +6,11 @@ All notable changes to this integration are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `PBS datastore` widget setting `Show usage, free space and snapshot tiles` (default: on)
+  to hide the three tiles.
+
 ### Changed
 
 - Widgets: three tiles per card so no tile sits alone on a row; usage shown as a whole
