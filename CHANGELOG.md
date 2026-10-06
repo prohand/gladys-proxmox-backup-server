@@ -8,8 +8,52 @@ All notable changes to this integration are documented here. The format follows
 
 ### Added
 
+- `SECURITY.md`: how to report a vulnerability.
+
+### Changed
+
+- Development dependencies updated to their latest versions (ESLint 10.12, Prettier 3.9.9,
+  globals 17.13).
+
+### Removed
+
+- The Dependabot configuration: dependencies are now updated by hand.
+
+## [2.1.2] - 2026-10-02
+
+### Changed
+
+- Prettier updated in the development tooling.
+
+## [2.1.1] - 2026-09-24
+
+### Added
+
 - `PBS datastore` widget setting `Show usage, free space and snapshot tiles` (default: on)
   to hide the three tiles.
+
+## [2.1.0] - 2026-09-24
+
+### Changed
+
+- `PBS datastore` widget: verify, garbage collection, and prune are shown as cards (name,
+  date formatted by Gladys, colored result badge such as `Réussie`) in place of the 30-day
+  usage chart, since a widget holds a single chart or card list.
+
+## [2.0.3] - 2026-09-23
+
+### Changed
+
+- GitHub Actions, Docker build action and development tooling updated.
+
+## [2.0.2] - 2026-09-23
+
+### Fixed
+
+- `Time zone` setting (IANA name, for example `Europe/Paris`): task and backup dates were
+  always shown in UTC, two hours behind in French summer time. Defaults to `UTC`.
+
+## [2.0.1] - 2026-09-23
 
 ### Changed
 
@@ -17,16 +61,13 @@ All notable changes to this integration are documented here. The format follows
   percent; sizes shown in GB or TB with the local decimal separator. `PBS datastore` shows
   the free space as a tile and used / total space as a status row; `PBS backups` drops the
   datastore count tile (the status rows list every datastore) and shortens its French labels.
-- `PBS datastore` widget: verify, garbage collection, and prune are shown as cards (name,
-  date formatted by Gladys, colored result badge such as `Réussie`) in place of the 30-day
-  usage chart, since a widget holds a single chart or card list.
 
 ### Fixed
 
-- `Time zone` setting (IANA name, for example `Europe/Paris`): task and backup dates were
-  always shown in UTC, two hours behind in French summer time. Defaults to `UTC`.
 - The Release workflow runs Prettier on the manifest after `jq`, so the release commit no
   longer fails the CI format check.
+
+## [2.0.0] - 2026-09-23
 
 ### Added
 
@@ -39,6 +80,22 @@ All notable changes to this integration are documented here. The format follows
 - Gladys 5.1 scene actions: get a datastore status (usage, snapshots, last tasks) and get a
   backup report with counters and a ready-to-send text in English or French.
 
+### Changed
+
+- Requires Gladys 5.1.0 or later (`gladys_version`), and the integration SDK 0.14.
+
+## [1.0.3] - 2026-08-21
+
+### Fixed
+
+- Text features publish a `min`/`max` range again: Gladys stores those columns as NOT NULL
+  and compares them to detect a structure change, so publishing them empty left the
+  "Update" button of the Discovery screen showing forever on an already-added datastore.
+
+## [1.0.2] - 2026-08-21
+
+### Added
+
 - `CLAUDE.md` contributor guide.
 - `CHANGELOG.md` and a Dependabot configuration for npm, Docker, and GitHub Actions.
 - `npm run check:pbs`, a read-only diagnostic script reporting which inventory route each
@@ -47,8 +104,6 @@ All notable changes to this integration are documented here. The format follows
   retry after a failed refresh, and the startup backoff.
 
 ### Changed
-
-- Requires Gladys 5.1.0 or later (`gladys_version`), and the integration SDK 0.14.
 
 - Snapshot count and backup freshness are read from the datastore backup groups instead of
   the full snapshot list, which avoids downloading megabytes of JSON on every refresh.
@@ -67,20 +122,28 @@ All notable changes to this integration are documented here. The format follows
 
 - A datastore that is offline or unmounted no longer publishes `NaN` for usage, total size,
   and used space.
-- Text features publish a `min`/`max` range again: Gladys stores those columns as NOT NULL
-  and compares them to detect a structure change, so publishing them empty left the
-  "Update" button of the Discovery screen showing forever on an already-added datastore.
 
 ### Removed
 
 - The unused `taskSummary()` helper, replaced by `taskDetails()` when statuses and dates were
   split into separate features.
 
-## [1.0.1]
+## [1.0.1] - 2026-08-17
 
-- Configurable task date format, offered as a dropdown in the integration settings.
-
-## [1.0.0]
-
-- Initial release: read-only monitoring of PBS datastores, capacity, snapshot inventory,
+- First release: read-only monitoring of PBS datastores, capacity, snapshot inventory,
   maintenance task status, and backup freshness.
+- Configurable task date format, offered as a dropdown in the integration settings.
+- Verify, garbage collection and prune status and date published as separate features.
+- Refresh interval clamped to database-safe limits.
+
+[Unreleased]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.1.2...HEAD
+[2.1.2]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.1.1...v2.1.2
+[2.1.1]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.1.0...v2.1.1
+[2.1.0]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.0.3...v2.1.0
+[2.0.3]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.0.2...v2.0.3
+[2.0.2]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.0.1...v2.0.2
+[2.0.1]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.0.0...v2.0.1
+[2.0.0]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v1.0.3...v2.0.0
+[1.0.3]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v1.0.2...v1.0.3
+[1.0.2]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/prohand/gladys-proxmox-backup-server/releases/tag/v1.0.1
