@@ -6,6 +6,13 @@ All notable changes to this integration are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- The connection status now follows every refresh: a PBS that started after Gladys no longer
+  stays red once it answers, and a PBS that goes down later no longer stays green.
+- A datastore deleted on PBS while its device still exists in Gladys no longer triggers a full
+  discovery on every one-minute poll, only once per refresh interval.
+
 ## [2.2.0] - 2026-10-06
 
 ### Added
