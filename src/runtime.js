@@ -1,4 +1,5 @@
 import { logger } from '@gladysassistant/integration-sdk';
+import { withPullDeadline } from './widgetDeadline.js';
 import { normalizeConfig } from './config.js';
 import { buildDatastoreDevice, datastoreStates, isPollDue, readDatastore } from './datastores.js';
 import { ProxmoxClient } from './proxmox.js';
@@ -312,8 +313,12 @@ export function registerRuntime(gladys, runtime = createRuntime(gladys)) {
   gladys.onScanRequest(() => runtime.discover());
   gladys.onPoll((device) => runtime.poll(device));
   gladys.onAction('test_connection', () => runtime.testConnection());
-  gladys.onWidgetGet(WIDGETS.DATASTORE, (request) => runtime.datastoreWidget(request));
-  gladys.onWidgetGet(WIDGETS.OVERVIEW, () => runtime.overviewWidget());
+  // Raced against a deadline: a slow PBS gives a loading card instead of a card
+  // the core gives up on for good after 15 s (src/widgetDeadline.js).
+  gladys.onWidgetGet(WIDGETS.DATASTORE, (request) =>
+    withPullDeadline(() => runtime.datastoreWidget(request)),
+  );
+  gladys.onWidgetGet(WIDGETS.OVERVIEW, () => withPullDeadline(() => runtime.overviewWidget()));
   gladys.onWidgetAction(WIDGETS.DATASTORE, (actionKey, params, context) =>
     actionKey === WIDGET_ACTIONS.REFRESH
       ? runtime.refreshDatastoreWidget(actionKey, params, context)

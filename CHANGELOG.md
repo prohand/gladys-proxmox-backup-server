@@ -12,6 +12,8 @@ All notable changes to this integration are documented here. The format follows
   stays red once it answers, and a PBS that goes down later no longer stays green.
 - A datastore deleted on PBS while its device still exists in Gladys no longer triggers a full
   discovery on every one-minute poll, only once per refresh interval.
+- A widget whose read takes longer than 9 s now shows "loading" and is re-read 15 s later, instead
+  of missing the 15 s Gladys waits and staying "unavailable" until the dashboard is reloaded.
 
 ## [2.2.0] - 2026-10-06
 
