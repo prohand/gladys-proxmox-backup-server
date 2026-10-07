@@ -509,3 +509,58 @@ test('widget refresh buttons read PBS again and answer with a toast', async () =
   assert.equal(reads, 3);
   assert.equal(gladys.calls.states.length, 3);
 });
+
+test('the connection status follows the polls after a failed start', async () => {
+  const gladys = fakeGladys(CONFIG);
+  let up = false;
+  let clock = NOW;
+  const runtime = createRuntime(gladys, {
+    listDatastores: () =>
+      up ? Promise.resolve([{ store: 'one' }]) : Promise.reject(new Error('ECONNREFUSED')),
+    readSummary: () => (up ? Promise.resolve(summary()) : Promise.reject(new Error('timed out'))),
+    wait: () => Promise.resolve(),
+    now: () => clock,
+  });
+  assert.equal(await runtime.start(), false);
+  assert.equal(gladys.calls.connectionStatus.at(-1).connected, false);
+
+  up = true;
+  await runtime.poll({ external_id: DEVICE });
+  assert.equal(gladys.calls.connectionStatus.at(-1).connected, true);
+
+  up = false;
+  clock += CONFIG.poll_frequency * 1000;
+  await assert.rejects(runtime.poll({ external_id: DEVICE }), /timed out/);
+  const last = gladys.calls.connectionStatus.at(-1);
+  assert.equal(last.connected, false);
+  assert.match(last.message.fr, /injoignable : timed out/);
+
+  const reported = gladys.calls.connectionStatus.length;
+  await assert.rejects(runtime.poll({ external_id: DEVICE }), /timed out/);
+  assert.equal(gladys.calls.connectionStatus.length, reported, 'reported once per change');
+});
+
+test('an unknown device asks for a discovery once per refresh interval', async () => {
+  const gladys = fakeGladys(CONFIG);
+  let clock = NOW;
+  let discoveries = 0;
+  const runtime = createRuntime(gladys, {
+    listDatastores: () => {
+      discoveries += 1;
+      return Promise.resolve([{ store: 'one' }]);
+    },
+    readSummary: () => Promise.resolve(summary()),
+    now: () => clock,
+  });
+  await runtime.updateConfig(CONFIG);
+  const deleted = { external_id: 'ext:test:pbs-datastore:deleted' };
+
+  await runtime.poll(deleted);
+  clock += 60_000;
+  await runtime.poll(deleted);
+  assert.equal(discoveries, 2);
+
+  clock += CONFIG.poll_frequency * 1000;
+  await runtime.poll(deleted);
+  assert.equal(discoveries, 3);
+});

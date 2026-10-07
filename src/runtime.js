@@ -1,4 +1,5 @@
 import { logger } from '@gladysassistant/integration-sdk';
+import { withPullDeadline } from './widgetDeadline.js';
 import { normalizeConfig } from './config.js';
 import { buildDatastoreDevice, datastoreStates, isPollDue, readDatastore } from './datastores.js';
 import { ProxmoxClient } from './proxmox.js';
@@ -47,6 +48,14 @@ export function createRuntime(gladys, dependencies = {}) {
   // it, so a refresh asked by a scene or a widget never fires an event itself.
   const baselineByExternalId = new Map();
   const reachableByExternalId = new Map();
+  // Last time an unknown external_id asked for a discovery: a datastore deleted on PBS while its
+  // device lives on in Gladys must not cost a full discovery on every one-minute poll.
+  const lookupAtByUnknownId = new Map();
+  // Datastores whose last read failed, and the status last reported to Gladys. The status used to
+  // be written by start() alone: a PBS that booted after Gladys stayed red for good, and one that
+  // went down later stayed green.
+  const failingExternalIds = new Map();
+  let reportedConnected = null;
 
   async function discover() {
     const stores = await listDatastores(config);
@@ -70,8 +79,35 @@ export function createRuntime(gladys, dependencies = {}) {
   }
 
   async function resolveStore(externalId) {
-    if (!datastoreByExternalId.has(externalId)) await discover();
+    if (!datastoreByExternalId.has(externalId)) {
+      const last = lookupAtByUnknownId.get(externalId);
+      if (last === undefined || now() - last >= config.poll_frequency * 1000) {
+        lookupAtByUnknownId.set(externalId, now());
+        await discover();
+      }
+    }
     return datastoreByExternalId.get(externalId);
+  }
+
+  async function reportReadOutcome(externalId, error) {
+    if (error) failingExternalIds.set(externalId, error);
+    else failingExternalIds.delete(externalId);
+    const connected = failingExternalIds.size === 0;
+    if (connected === reportedConnected) return;
+    reportedConnected = connected;
+    const [firstError] = failingExternalIds.values();
+    const reason = String(firstError?.message ?? '').slice(0, 150);
+    await gladys
+      .setConnectionStatus(
+        connected,
+        connected
+          ? undefined
+          : {
+              en: `Proxmox Backup Server unreachable: ${reason}`,
+              fr: `Proxmox Backup Server injoignable : ${reason}`,
+            },
+      )
+      .catch((statusError) => logger.warn(`Status not reported: ${statusError.message}`));
   }
 
   // Read one datastore now and publish its states: the only path to PBS for a
@@ -127,6 +163,7 @@ export function createRuntime(gladys, dependencies = {}) {
       // Forget the timestamp so the next tick retries instead of waiting a full
       // refresh interval after a transient failure.
       lastPollAtByExternalId.delete(externalId);
+      await reportReadOutcome(externalId, error);
       if (reachableByExternalId.get(externalId) !== false) {
         reachableByExternalId.set(externalId, false);
         await publishSceneEvents([unreachableEvent(store, externalId, error)]);
@@ -138,6 +175,7 @@ export function createRuntime(gladys, dependencies = {}) {
       events.unshift(reachableEvent(store, externalId));
     reachableByExternalId.set(externalId, true);
     baselineByExternalId.set(externalId, summary);
+    await reportReadOutcome(externalId, null);
     await publishSceneEvents(events);
     nudgeWidgets();
   }
@@ -225,6 +263,8 @@ export function createRuntime(gladys, dependencies = {}) {
     summaryByExternalId.clear();
     baselineByExternalId.clear();
     reachableByExternalId.clear();
+    lookupAtByUnknownId.clear();
+    failingExternalIds.clear();
     await discover();
   }
 
@@ -234,6 +274,7 @@ export function createRuntime(gladys, dependencies = {}) {
       try {
         await updateConfig(await gladys.getConfig());
         await gladys.setConnectionStatus(true);
+        reportedConnected = true;
         return true;
       } catch (error) {
         lastError = error;
@@ -248,6 +289,7 @@ export function createRuntime(gladys, dependencies = {}) {
         fr: 'Connexion à Proxmox Backup Server impossible. Vérifiez la configuration et les logs.',
       })
       .catch(() => {});
+    reportedConnected = false;
     return false;
   }
 
@@ -271,8 +313,12 @@ export function registerRuntime(gladys, runtime = createRuntime(gladys)) {
   gladys.onScanRequest(() => runtime.discover());
   gladys.onPoll((device) => runtime.poll(device));
   gladys.onAction('test_connection', () => runtime.testConnection());
-  gladys.onWidgetGet(WIDGETS.DATASTORE, (request) => runtime.datastoreWidget(request));
-  gladys.onWidgetGet(WIDGETS.OVERVIEW, () => runtime.overviewWidget());
+  // Raced against a deadline: a slow PBS gives a loading card instead of a card
+  // the core gives up on for good after 15 s (src/widgetDeadline.js).
+  gladys.onWidgetGet(WIDGETS.DATASTORE, (request) =>
+    withPullDeadline(() => runtime.datastoreWidget(request)),
+  );
+  gladys.onWidgetGet(WIDGETS.OVERVIEW, () => withPullDeadline(() => runtime.overviewWidget()));
   gladys.onWidgetAction(WIDGETS.DATASTORE, (actionKey, params, context) =>
     actionKey === WIDGET_ACTIONS.REFRESH
       ? runtime.refreshDatastoreWidget(actionKey, params, context)
