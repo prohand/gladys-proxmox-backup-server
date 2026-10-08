@@ -74,7 +74,18 @@ export function formatSize(gb) {
   return { en: `${value.en} ${unit.en}`, fr: `${value.fr} ${unit.fr}` };
 }
 
+// Capacity is null while a datastore is offline or unmounted: it is shown as
+// unknown rather than as an empty datastore.
+const hasCapacity = (summary) => Number.isFinite(summary.usagePercent);
+const UNKNOWN_VALUE = { en: '—', fr: '—' };
+
 function spaceItem(summary) {
+  if (!hasCapacity(summary))
+    return {
+      label: { en: 'Used space', fr: 'Espace utilisé' },
+      value: { en: 'Unavailable', fr: 'Indisponible' },
+      color: WIDGET_COLORS.NEUTRAL,
+    };
   const used = formatSize(summary.usedGb);
   const total = formatSize(summary.totalGb);
   return {
@@ -112,22 +123,35 @@ function backupItem(summary) {
  */
 export function datastoreWidgetContent(gladys, summary, { showTiles = true } = {}) {
   const ids = gladys.externalIds('pbs-datastore', summary.store);
+  const capacityTiles = hasCapacity(summary)
+    ? [
+        {
+          type: 'gauge',
+          label: { en: 'Usage', fr: 'Utilisation' },
+          value: Math.round(summary.usagePercent),
+          min: 0,
+          max: 100,
+          unit: '%',
+          color: usageColor(summary.usagePercent),
+        },
+        {
+          type: 'value',
+          label: { en: 'Free', fr: 'Libre' },
+          ...sizeParts(Math.max(0, summary.totalGb - summary.usedGb)),
+          icon: 'hard-drive',
+        },
+      ]
+    : [
+        { type: 'value', label: { en: 'Usage', fr: 'Utilisation' }, value: UNKNOWN_VALUE },
+        {
+          type: 'value',
+          label: { en: 'Free', fr: 'Libre' },
+          value: UNKNOWN_VALUE,
+          icon: 'hard-drive',
+        },
+      ];
   const tiles = [
-    {
-      type: 'gauge',
-      label: { en: 'Usage', fr: 'Utilisation' },
-      value: Math.round(summary.usagePercent),
-      min: 0,
-      max: 100,
-      unit: '%',
-      color: usageColor(summary.usagePercent),
-    },
-    {
-      type: 'value',
-      label: { en: 'Free', fr: 'Libre' },
-      ...sizeParts(Math.max(0, summary.totalGb - summary.usedGb)),
-      icon: 'hard-drive',
-    },
+    ...capacityTiles,
     {
       type: 'value',
       label: { en: 'Snapshots', fr: 'Snapshots' },
@@ -181,6 +205,7 @@ function overviewItem(summary) {
   } else if (summary.usagePercent >= USAGE_WARNING_PERCENT) {
     color = usageColor(summary.usagePercent);
   }
+  if (!hasCapacity(summary)) return { label: summary.store, value, color };
   const usage = `${Math.round(summary.usagePercent)} %`;
   return {
     label: summary.store,
@@ -200,7 +225,9 @@ export function overviewWidgetContent(summaries, failures = new Map()) {
       total + Object.values(summary.tasks).filter((task) => task.result === 'error').length,
     0,
   );
-  const maxUsage = Math.round(Math.max(0, ...summaries.map((summary) => summary.usagePercent)));
+  const maxUsage = Math.round(
+    Math.max(0, ...summaries.filter(hasCapacity).map((summary) => summary.usagePercent)),
+  );
   const items = [
     ...summaries.map(overviewItem),
     ...[...failures.keys()].map((store) => ({

@@ -117,16 +117,25 @@ export function summarizeDatastore(
 ) {
   const newestBackupEpoch = Number(inventory.newestBackupEpoch) || 0;
   const ageSeconds = now / 1000 - newestBackupEpoch;
-  // A datastore that is offline or unmounted reports no capacity at all; keep
-  // publishing 0 instead of NaN so the Gladys history stays usable.
+  // A datastore that is offline or unmounted reports no capacity at all. Its
+  // capacity is then unknown (null) and nothing is published for it: a 0 would
+  // draw a datastore suddenly emptied in the Gladys history, and fire any scene
+  // watching the usage. The last real value stays on screen.
   const total = Number(store.total);
   const used = Number(store.used);
-  const hasCapacity = Number.isFinite(total) && Number.isFinite(used) && total > 0;
+  const hasCapacity =
+    store.total !== undefined &&
+    store.total !== null &&
+    store.used !== undefined &&
+    store.used !== null &&
+    Number.isFinite(total) &&
+    Number.isFinite(used) &&
+    total > 0;
   return {
     store: store.store,
-    usagePercent: hasCapacity ? roundToTwo((used / total) * 100) : 0,
-    totalGb: roundToTwo(total / 1e9),
-    usedGb: roundToTwo(used / 1e9),
+    usagePercent: hasCapacity ? roundToTwo((used / total) * 100) : null,
+    totalGb: hasCapacity ? roundToTwo(total / 1e9) : null,
+    usedGb: hasCapacity ? roundToTwo(used / 1e9) : null,
     snapshotCount: roundToTwo(inventory.snapshotCount),
     newestBackupEpoch,
     lastBackup: newestBackupEpoch
@@ -146,10 +155,16 @@ export function summarizeDatastore(
 export function datastoreStates(gladys, summary) {
   const ids = gladys.externalIds('pbs-datastore', summary.store);
   const { verify, gc, prune } = summary.tasks;
+  const capacity =
+    summary.usagePercent === null
+      ? []
+      : [
+          { device_feature_external_id: ids.feature('usage'), state: summary.usagePercent },
+          { device_feature_external_id: ids.feature('total'), state: summary.totalGb },
+          { device_feature_external_id: ids.feature('used'), state: summary.usedGb },
+        ];
   return [
-    { device_feature_external_id: ids.feature('usage'), state: summary.usagePercent },
-    { device_feature_external_id: ids.feature('total'), state: summary.totalGb },
-    { device_feature_external_id: ids.feature('used'), state: summary.usedGb },
+    ...capacity,
     { device_feature_external_id: ids.feature('snapshots'), state: summary.snapshotCount },
     { device_feature_external_id: ids.feature('last-verify'), text: verify.status },
     { device_feature_external_id: ids.feature('last-verify-date'), text: verify.date },
@@ -176,14 +191,40 @@ export function buildDatastoreStates(
   );
 }
 
-export async function readDatastore(storeName, config, now = Date.now()) {
-  const client = new ProxmoxClient(config);
-  const [stores, inventory, tasks] = await Promise.all([
-    client.getDatastores(),
+/**
+ * Thrown when PBS no longer lists a datastore: it was removed or renamed on the
+ * server. Not an outage — PBS answered — so the runtime re-discovers instead of
+ * reporting PBS as unreachable.
+ */
+export class DatastoreMissingError extends Error {
+  constructor(store) {
+    super(`Datastore ${store} no longer exists on the Proxmox Backup Server`);
+    this.name = 'DatastoreMissingError';
+    this.store = store;
+    this.messages = {
+      en: this.message,
+      fr: `Le datastore ${store} n'existe plus sur le Proxmox Backup Server`,
+    };
+  }
+}
+
+/**
+ * Read one datastore. `readUsage` lets every datastore of a refresh share one
+ * `/status/datastore-usage` read (the route lists them all), and it is read
+ * first: a datastore it no longer lists costs no other request.
+ */
+export async function readDatastore(
+  storeName,
+  config,
+  now = Date.now(),
+  { client = new ProxmoxClient(config), readUsage = () => client.getDatastores() } = {},
+) {
+  const stores = await readUsage();
+  const store = (Array.isArray(stores) ? stores : []).find((item) => item.store === storeName);
+  if (!store) throw new DatastoreMissingError(storeName);
+  const [inventory, tasks] = await Promise.all([
     readInventory(client, storeName),
     fetchTasks(client, storeName),
   ]);
-  const store = stores.find((item) => item.store === storeName);
-  if (!store) throw new Error(`Datastore ${storeName} no longer exists`);
   return summarizeDatastore(store, inventory, tasks, now, config.date_format, config.timezone);
 }
