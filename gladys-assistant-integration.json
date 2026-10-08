@@ -41,8 +41,8 @@
         "fr": "URL du serveur"
       },
       "description": {
-        "en": "For example: https://pbs.example.com:8007",
-        "fr": "Par exemple : https://pbs.example.com:8007"
+        "en": "For example: https://pbs.example.com:8007. Avoid http://: it sends the API token in clear text.",
+        "fr": "Par exemple : https://pbs.example.com:8007. Évitez http:// : le jeton API circule alors en clair."
       },
       "required": true
     },
@@ -91,6 +91,23 @@
       "max": 86400
     },
     {
+      "key": "tls_fingerprint",
+      "type": "string",
+      "label": {
+        "en": "TLS certificate fingerprint",
+        "fr": "Empreinte du certificat TLS"
+      },
+      "description": {
+        "en": "Recommended with the default self-signed PBS certificate: its SHA-256 fingerprint (Dashboard > Show Fingerprint). The token is only sent to a server presenting it. Leave empty for a certificate signed by a trusted CA.",
+        "fr": "Recommandé avec le certificat auto-signé de PBS : son empreinte SHA-256 (Tableau de bord > Afficher l'empreinte). Le jeton n'est envoyé qu'à un serveur qui la présente. Laissez vide pour un certificat signé par une AC reconnue."
+      },
+      "placeholder": {
+        "en": "AA:BB:CC:...:FF",
+        "fr": "AA:BB:CC:...:FF"
+      },
+      "required": false
+    },
+    {
       "key": "verify_tls",
       "type": "boolean",
       "label": {
@@ -98,7 +115,11 @@
         "fr": "Vérifier le certificat TLS"
       },
       "required": false,
-      "default": true
+      "default": true,
+      "description": {
+        "en": "Ignored when a fingerprint is pinned. Turn off only as a last resort, on a trusted network: the connection stays encrypted but nothing proves the server is the real one.",
+        "fr": "Ignoré quand une empreinte est épinglée. À désactiver en dernier recours, sur un réseau de confiance : la connexion reste chiffrée mais rien ne prouve l'identité du serveur."
+      }
     },
     {
       "key": "date_format",

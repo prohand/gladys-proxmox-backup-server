@@ -5,11 +5,16 @@ import {
   fetchTasks,
   formatTaskDate,
   newestBackupEpoch,
+  pageTasks,
+  ProxmoxError,
   readInventory,
+  resetTypeFilterSupport,
   TASK_MAX_PAGES,
   TASK_PAGE_SIZE,
+  TASK_TYPE_FILTERS,
   taskDetails,
   taskResult,
+  TYPED_TASK_LIMIT,
 } from '../src/proxmox.js';
 
 test('newestBackupEpoch accepts PBS group and snapshot fields', () => {
@@ -98,7 +103,7 @@ test('taskResult reduces PBS statuses to ok, warning, error, or running', () => 
   );
 });
 
-test('fetchTasks pages until every task type has been seen', async () => {
+test('pageTasks pages until every task type has been seen', async () => {
   const pages = [
     Array.from({ length: TASK_PAGE_SIZE }, () => ({ worker_type: 'backup', endtime: 1 })),
     [
@@ -116,7 +121,7 @@ test('fetchTasks pages until every task type has been seen', async () => {
     },
   };
 
-  const tasks = await fetchTasks(client, 'backup-store');
+  const tasks = await pageTasks(client, 'backup-store');
   assert.equal(tasks.length, TASK_PAGE_SIZE + 3);
   assert.deepEqual(calls, [
     { store: 'backup-store', start: 0, limit: TASK_PAGE_SIZE },
@@ -124,9 +129,9 @@ test('fetchTasks pages until every task type has been seen', async () => {
   ]);
 });
 
-test('fetchTasks stops on a short page and respects the page budget', async () => {
+test('pageTasks stops on a short page and respects the page budget', async () => {
   const shortPage = { getTasks: () => Promise.resolve([{ worker_type: 'backup' }]) };
-  assert.equal((await fetchTasks(shortPage, 'store')).length, 1);
+  assert.equal((await pageTasks(shortPage, 'store')).length, 1);
 
   let requests = 0;
   const endlessPages = {
@@ -137,7 +142,7 @@ test('fetchTasks stops on a short page and respects the page budget', async () =
       );
     },
   };
-  await fetchTasks(endlessPages, 'store');
+  await pageTasks(endlessPages, 'store');
   assert.equal(requests, TASK_MAX_PAGES);
 });
 
@@ -161,7 +166,10 @@ test('readInventory prefers the cheap groups route', async () => {
 
 test('readInventory falls back to the snapshot list', async () => {
   const missingRoute = {
-    getGroups: () => Promise.reject(new Error('PBS API returned HTTP 404')),
+    getGroups: () =>
+      Promise.reject(
+        new ProxmoxError('http', { en: 'PBS answered HTTP 404', fr: 'HTTP 404' }, { status: 404 }),
+      ),
     getSnapshots: () => Promise.resolve([{ 'backup-time': 10 }, { 'backup-time': 60 }]),
   };
   const warnings = [];
@@ -181,4 +189,80 @@ test('readInventory falls back to the snapshot list', async () => {
     newestBackupEpoch: 5,
     source: 'snapshots',
   });
+});
+
+test('readInventory does not fall back to the snapshot list on a timeout or a cut connection', async () => {
+  for (const kind of ['timeout', 'network', 'auth']) {
+    const client = {
+      getGroups: () => Promise.reject(new ProxmoxError(kind, { en: kind, fr: kind })),
+      getSnapshots: () => assert.fail(`no snapshot listing after a ${kind} error`),
+    };
+    await assert.rejects(readInventory(client, 'store', silentLogger), { kind });
+  }
+  const badRequest = {
+    getGroups: () =>
+      Promise.reject(new ProxmoxError('http', { en: '400', fr: '400' }, { status: 400 })),
+    getSnapshots: () => Promise.resolve([{ 'backup-time': 7 }]),
+  };
+  assert.equal((await readInventory(badRequest, 'store', silentLogger)).source, 'snapshots');
+});
+
+test('fetchTasks asks PBS for each task type with a filter instead of paging', async () => {
+  resetTypeFilterSupport();
+  const calls = [];
+  const client = {
+    config: { base_url: 'https://typed:8007' },
+    getTasks(store, options) {
+      calls.push({ store, ...options });
+      if (options.typefilter === 'garbage') return Promise.resolve([]);
+      return Promise.resolve([
+        {
+          worker_type: options.typefilter === 'prune' ? 'prunejob' : 'verificationjob',
+          endtime: 9,
+        },
+      ]);
+    },
+  };
+  const tasks = await fetchTasks(client, 'store');
+  assert.deepEqual(
+    calls.map(({ typefilter, limit, start }) => ({ typefilter, limit, start })),
+    Object.values(TASK_TYPE_FILTERS).map((typefilter) => ({
+      typefilter,
+      limit: TYPED_TASK_LIMIT,
+      start: 0,
+    })),
+  );
+  assert.equal(tasks.length, 2);
+  // A type that never ran costs one empty answer, not four pages of 500 tasks.
+  assert.equal(taskDetails(tasks, 'gc').result, 'never');
+  assert.equal(taskDetails(tasks, 'prune').result, 'ok');
+});
+
+test('fetchTasks falls back to paging, once and for good, on a PBS refusing the filter', async () => {
+  resetTypeFilterSupport();
+  const calls = [];
+  const warnings = [];
+  const client = {
+    config: { base_url: 'https://old:8007' },
+    getTasks(store, options) {
+      calls.push(options.typefilter ?? 'page');
+      if (options.typefilter)
+        return Promise.reject(new ProxmoxError('http', { en: '400', fr: '400' }, { status: 400 }));
+      return Promise.resolve([{ worker_type: 'prune', endtime: 1 }]);
+    },
+  };
+  const log = { warn: (message) => warnings.push(message) };
+  assert.equal((await fetchTasks(client, 'store', undefined, log)).length, 1);
+  assert.equal(warnings.length, 1);
+  calls.length = 0;
+  await fetchTasks(client, 'store', undefined, log);
+  assert.deepEqual(calls, ['page']);
+
+  // Any other failure is the refresh's failure, not a reason to page.
+  resetTypeFilterSupport();
+  const down = {
+    config: { base_url: 'https://down:8007' },
+    getTasks: () => Promise.reject(new ProxmoxError('timeout', { en: 't', fr: 't' })),
+  };
+  await assert.rejects(fetchTasks(down, 'store', undefined, log), { kind: 'timeout' });
 });

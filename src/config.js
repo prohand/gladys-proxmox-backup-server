@@ -4,6 +4,7 @@ export const DEFAULT_CONFIG = {
   node: 'localhost',
   poll_frequency: 900,
   verify_tls: true,
+  tls_fingerprint: '',
   date_format: 'iso',
   timezone: 'UTC',
 };
@@ -45,6 +46,9 @@ export function normalizeConfig(raw = {}) {
     node: String(source.node ?? DEFAULT_CONFIG.node).trim() || DEFAULT_CONFIG.node,
     poll_frequency: normalizePollFrequency(source.poll_frequency ?? DEFAULT_CONFIG.poll_frequency),
     verify_tls: source.verify_tls !== false,
+    // Kept as typed: the client normalizes the separators and refuses a value
+    // that is not a SHA-256 fingerprint, with a message naming the field.
+    tls_fingerprint: String(source.tls_fingerprint ?? '').trim(),
     date_format: String(source.date_format ?? DEFAULT_CONFIG.date_format).trim() || 'iso',
     timezone: normalizeTimeZone(source.timezone),
   };
