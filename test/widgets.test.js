@@ -82,3 +82,22 @@ test('the datastore widget can hide its three tiles', () => {
     ['text', 'card-list', 'status', 'button'],
   );
 });
+
+test('an offline datastore shows its capacity as unknown, never as an empty datastore', () => {
+  const offline = summarizeDatastore(
+    { store: 'nas' },
+    { snapshotCount: 250, newestBackupEpoch: NOW / 1000 - 3600 },
+    [],
+    NOW,
+  );
+  const datastore = datastoreWidgetContent(gladys, offline);
+  const overview = overviewWidgetContent([offline, summary()]);
+  for (const content of [datastore, overview]) assert.deepEqual(validateWidgetContent(content), []);
+  assert.equal(tiles(datastore).length, 3);
+  assert.ok(!tiles(datastore).some(({ type }) => type === 'gauge'));
+  const text = JSON.stringify(datastore);
+  assert.ok(text.includes('Indisponible') && !text.includes('"0 %"'));
+  // The fullest datastore with a known capacity drives the overview gauge.
+  assert.equal(tiles(overview)[0].value, 69);
+  assert.ok(!JSON.stringify(overview).includes('NaN'));
+});

@@ -137,7 +137,15 @@ function reportLine(summary, language) {
   for (const type of failedTasks(summary))
     problems.push(fr ? `échec ${TASK_LABELS[type].fr}` : `${TASK_LABELS[type].en} failed`);
   const state = problems.length ? problems.join(', ') : 'OK';
-  const usage = fr ? `utilisé ${summary.usagePercent} %` : `${summary.usagePercent}% used`;
+  // Null while the datastore is offline or unmounted: said, not shown as 0 %.
+  const known = Number.isFinite(summary.usagePercent);
+  const usage = known
+    ? fr
+      ? `utilisé ${summary.usagePercent} %`
+      : `${summary.usagePercent}% used`
+    : fr
+      ? 'capacité inconnue'
+      : 'capacity unknown';
   return `${summary.store}${fr ? ' : ' : ': '}${state} (${usage})`;
 }
 
@@ -160,7 +168,12 @@ export function backupReportOutputs(summaries, failures = new Map(), language = 
     stale_count: staleCount,
     failed_task_count: failedTaskCount,
     unreachable_count: failures.size,
-    max_usage_percent: Math.max(0, ...summaries.map((summary) => summary.usagePercent)),
+    max_usage_percent: Math.max(
+      0,
+      ...summaries
+        .map((summary) => summary.usagePercent)
+        .filter((percent) => Number.isFinite(percent)),
+    ),
     all_ok: allOk,
     summary: [
       `${title}${fr ? ' : ' : ': '}${allOk ? 'OK' : fr ? 'à vérifier' : 'needs attention'}`,

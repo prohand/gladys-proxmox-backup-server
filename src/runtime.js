@@ -1,7 +1,13 @@
 import { logger } from '@gladysassistant/integration-sdk';
 import { withPullDeadline } from './widgetDeadline.js';
 import { normalizeConfig } from './config.js';
-import { buildDatastoreDevice, datastoreStates, isPollDue, readDatastore } from './datastores.js';
+import {
+  buildDatastoreDevice,
+  DatastoreMissingError,
+  datastoreStates,
+  isPollDue,
+  readDatastore,
+} from './datastores.js';
 import { ProxmoxClient } from './proxmox.js';
 import {
   backupReportOutputs,
@@ -21,6 +27,12 @@ import {
 
 export const START_RETRY_ATTEMPTS = 4;
 export const START_RETRY_BASE_DELAY_MS = 5000;
+// `/status/datastore-usage` lists every datastore at once: the reads of one
+// Gladys tick (it polls every device within the same minute) share one answer.
+export const USAGE_SHARE_MS = 30_000;
+// A device whose datastore PBS no longer lists is looked up again after one
+// refresh interval, then twice as long each time, up to a day.
+export const MISSING_LOOKUP_MAX_MS = 24 * 60 * 60 * 1000;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -48,17 +60,37 @@ export function createRuntime(gladys, dependencies = {}) {
   // it, so a refresh asked by a scene or a widget never fires an event itself.
   const baselineByExternalId = new Map();
   const reachableByExternalId = new Map();
-  // Last time an unknown external_id asked for a discovery: a datastore deleted on PBS while its
-  // device lives on in Gladys must not cost a full discovery on every one-minute poll.
+  // Last discovery an unknown external_id asked for, and the delay before the next one: a
+  // datastore deleted on PBS while its device lives on in Gladys must not cost a full discovery on
+  // every one-minute poll, and the delay grows while it stays missing.
   const lookupAtByUnknownId = new Map();
+  // The read in progress per device: a widget, a scene action and a poll asking at the same time
+  // share it instead of reading PBS two or three times over.
+  const inFlightByExternalId = new Map();
+  // Bumped on every configuration change: a read started for the previous server must not land
+  // in the caches of the new one.
+  let generation = 0;
+  let usageRead = null;
   // Datastores whose last read failed, and the status last reported to Gladys. The status used to
   // be written by start() alone: a PBS that booted after Gladys stayed red for good, and one that
   // went down later stayed green.
   const failingExternalIds = new Map();
   let reportedConnected = null;
 
+  // One `/status/datastore-usage` answer shared by the reads of a refresh;
+  // `force` (discovery) always asks PBS and seeds the share.
+  function readUsage(force = false) {
+    if (!force && usageRead && now() - usageRead.at < USAGE_SHARE_MS) return usageRead.promise;
+    const entry = { at: now(), promise: Promise.resolve().then(() => listDatastores(config)) };
+    usageRead = entry;
+    entry.promise.catch(() => {
+      if (usageRead === entry) usageRead = null;
+    });
+    return entry.promise;
+  }
+
   async function discover() {
-    const stores = await listDatastores(config);
+    const stores = await readUsage(true);
     const devices = stores.map((store) => buildDatastoreDevice(gladys, store));
     datastoreByExternalId.clear();
     devices.forEach((device, index) =>
@@ -74,53 +106,127 @@ export function createRuntime(gladys, dependencies = {}) {
         if (!datastoreByExternalId.has(externalId)) map.delete(externalId);
       }
     }
+    // A device found again stops backing off. One still missing keeps its delay.
+    for (const externalId of lookupAtByUnknownId.keys())
+      if (datastoreByExternalId.has(externalId)) lookupAtByUnknownId.delete(externalId);
+    // A datastore removed from PBS no longer counts as failing: left there, its last error kept
+    // the status red forever, although PBS itself answers.
+    let purged = false;
+    for (const externalId of failingExternalIds.keys()) {
+      if (!datastoreByExternalId.has(externalId)) {
+        failingExternalIds.delete(externalId);
+        purged = true;
+      }
+    }
+    if (purged) await syncStatus();
     await gladys.publishDiscoveredDevices(devices);
     return stores.length;
   }
 
+  function noteMissing(externalId) {
+    const base = config.poll_frequency * 1000;
+    const previous = lookupAtByUnknownId.get(externalId);
+    lookupAtByUnknownId.set(externalId, {
+      at: now(),
+      delayMs: previous ? Math.min(previous.delayMs * 2, MISSING_LOOKUP_MAX_MS) : base,
+    });
+  }
+
   async function resolveStore(externalId) {
     if (!datastoreByExternalId.has(externalId)) {
-      const last = lookupAtByUnknownId.get(externalId);
-      if (last === undefined || now() - last >= config.poll_frequency * 1000) {
-        lookupAtByUnknownId.set(externalId, now());
+      const lookup = lookupAtByUnknownId.get(externalId);
+      if (lookup === undefined || now() - lookup.at >= lookup.delayMs) {
+        // Stamped before the discovery, at the current delay: a PBS that is down retries at the
+        // refresh interval, it is only a datastore PBS answered without that backs off.
+        lookupAtByUnknownId.set(externalId, {
+          at: now(),
+          delayMs: lookup?.delayMs ?? config.poll_frequency * 1000,
+        });
         await discover();
+        if (!datastoreByExternalId.has(externalId) && lookup) noteMissing(externalId);
       }
     }
     return datastoreByExternalId.get(externalId);
   }
 
-  async function reportReadOutcome(externalId, error) {
-    if (error) failingExternalIds.set(externalId, error);
-    else failingExternalIds.delete(externalId);
+  // The user-facing reason of a failure, in both languages.
+  function reasonOf(error) {
+    const messages = error?.messages ?? { en: error?.message, fr: error?.message };
+    return {
+      en: String(messages.en ?? '').slice(0, 150),
+      fr: String(messages.fr ?? '').slice(0, 150),
+    };
+  }
+
+  async function syncStatus() {
     const connected = failingExternalIds.size === 0;
     if (connected === reportedConnected) return;
     reportedConnected = connected;
     const [firstError] = failingExternalIds.values();
-    const reason = String(firstError?.message ?? '').slice(0, 150);
+    const reason = reasonOf(firstError);
     await gladys
       .setConnectionStatus(
         connected,
         connected
           ? undefined
           : {
-              en: `Proxmox Backup Server unreachable: ${reason}`,
-              fr: `Proxmox Backup Server injoignable : ${reason}`,
+              en: `Proxmox Backup Server unreachable: ${reason.en}`,
+              fr: `Proxmox Backup Server injoignable : ${reason.fr}`,
             },
       )
       .catch((statusError) => logger.warn(`Status not reported: ${statusError.message}`));
   }
 
+  async function reportReadOutcome(externalId, error) {
+    if (error) failingExternalIds.set(externalId, error);
+    else failingExternalIds.delete(externalId);
+    await syncStatus();
+  }
+
   // Read one datastore now and publish its states: the only path to PBS for a
-  // poll, a widget, and a scene action alike.
-  async function refresh(externalId, store, at = now()) {
-    const summary = await readSummary(store, config, at);
-    summaryByExternalId.set(externalId, summary);
-    await gladys.publishStates(datastoreStates(gladys, summary));
-    return summary;
+  // poll, a widget, and a scene action alike. Concurrent callers share one
+  // read. A PBS failure rejects; a Gladys failure to store the states does
+  // not — PBS answered — and comes back as `publishError` instead.
+  function refresh(externalId, store, at = now()) {
+    const pending = inFlightByExternalId.get(externalId);
+    if (pending) return pending;
+    const startedIn = generation;
+    const promise = (async () => {
+      const summary = await readSummary(store, config, at, { readUsage });
+      if (startedIn !== generation) return { summary, publishError: null };
+      summaryByExternalId.set(externalId, summary);
+      try {
+        await gladys.publishStates(datastoreStates(gladys, summary));
+        return { summary, publishError: null };
+      } catch (publishError) {
+        logger.warn(
+          `Gladys did not store the states of datastore ${store}: ${publishError.message}`,
+        );
+        return { summary, publishError };
+      }
+    })().finally(() => {
+      if (inFlightByExternalId.get(externalId) === promise) inFlightByExternalId.delete(externalId);
+    });
+    inFlightByExternalId.set(externalId, promise);
+    return promise;
   }
 
   async function cachedOrRefresh(externalId, store, force = false) {
-    return (!force && summaryByExternalId.get(externalId)) || refresh(externalId, store);
+    const cached = !force && summaryByExternalId.get(externalId);
+    return cached || (await refresh(externalId, store)).summary;
+  }
+
+  // PBS answered without this datastore: it was removed or renamed there. A
+  // discovery drops it (and its error) from what the integration watches; the
+  // device left in Gladys is then looked up again ever less often.
+  async function forgetMissing(externalId, error) {
+    logger.warn(error.message);
+    try {
+      await discover();
+    } catch (discoveryError) {
+      logger.warn(`Discovery after a missing datastore failed: ${discoveryError.message}`);
+    }
+    if (!datastoreByExternalId.has(externalId)) noteMissing(externalId);
   }
 
   // A scene event or a widget nudge that fails must never fail the refresh
@@ -156,13 +262,17 @@ export function createRuntime(gladys, dependencies = {}) {
     if (!isPollDue(lastPollAtByExternalId.get(externalId), config.poll_frequency, startedAt))
       return;
     lastPollAtByExternalId.set(externalId, startedAt);
-    let summary;
+    let result;
     try {
-      summary = await refresh(externalId, store, startedAt);
+      result = await refresh(externalId, store, startedAt);
     } catch (error) {
       // Forget the timestamp so the next tick retries instead of waiting a full
       // refresh interval after a transient failure.
       lastPollAtByExternalId.delete(externalId);
+      if (error instanceof DatastoreMissingError) {
+        await forgetMissing(externalId, error);
+        return;
+      }
       await reportReadOutcome(externalId, error);
       if (reachableByExternalId.get(externalId) !== false) {
         reachableByExternalId.set(externalId, false);
@@ -170,12 +280,21 @@ export function createRuntime(gladys, dependencies = {}) {
       }
       throw error;
     }
+    const { summary, publishError } = result;
+    // PBS answered: whatever Gladys did with the states, PBS is reachable.
+    await reportReadOutcome(externalId, null);
+    if (publishError) {
+      // Retried on the next tick. No scene event either: the baseline stays
+      // where it was, so the change is reported once the states are stored.
+      lastPollAtByExternalId.delete(externalId);
+      const message = `Gladys did not store the states of datastore ${store}`;
+      throw new Error(`${message}: ${publishError.message}`, { cause: publishError });
+    }
     const events = detectSceneEvents(baselineByExternalId.get(externalId), summary, externalId);
     if (reachableByExternalId.get(externalId) === false)
       events.unshift(reachableEvent(store, externalId));
     reachableByExternalId.set(externalId, true);
     baselineByExternalId.set(externalId, summary);
-    await reportReadOutcome(externalId, null);
     await publishSceneEvents(events);
     nudgeWidgets();
   }
@@ -195,6 +314,17 @@ export function createRuntime(gladys, dependencies = {}) {
       else failures.set(entries[index][1], result.reason);
     });
     return { summaries, failures };
+  }
+
+  // Gladys drops states sent for a device that does not exist yet: a device
+  // just created from the Discovery screen is read now, not at the next refresh.
+  async function deviceCreated(device) {
+    lastPollAtByExternalId.delete(device.external_id);
+    try {
+      await poll(device);
+    } catch (error) {
+      logger.warn(`First read of the new device ${device.external_id} failed: ${error.message}`);
+    }
   }
 
   async function datastoreWidget({ settings = {} } = {}) {
@@ -249,7 +379,15 @@ export function createRuntime(gladys, dependencies = {}) {
   }
 
   async function testConnection() {
-    const count = await discover();
+    let count;
+    try {
+      count = await discover();
+    } catch (error) {
+      // A thrown action reaches the Configuration screen as plain text: both
+      // languages travel in one string.
+      const { en, fr } = error?.messages ?? { en: error?.message, fr: error?.message };
+      throw new Error(en === fr ? en : `${en} / ${fr}`, { cause: error });
+    }
     return {
       en: `Connection successful: ${count} datastore(s) found.`,
       fr: `Connexion réussie : ${count} datastore(s) trouvé(s).`,
@@ -259,6 +397,9 @@ export function createRuntime(gladys, dependencies = {}) {
   async function updateConfig(newConfig) {
     config = normalizeConfig(newConfig);
     // Another server or another date format: nothing read before still holds.
+    generation += 1;
+    usageRead = null;
+    inFlightByExternalId.clear();
     lastPollAtByExternalId.clear();
     summaryByExternalId.clear();
     baselineByExternalId.clear();
@@ -296,6 +437,7 @@ export function createRuntime(gladys, dependencies = {}) {
   return {
     discover,
     poll,
+    deviceCreated,
     testConnection,
     datastoreWidget,
     overviewWidget,
@@ -312,6 +454,7 @@ export function createRuntime(gladys, dependencies = {}) {
 export function registerRuntime(gladys, runtime = createRuntime(gladys)) {
   gladys.onScanRequest(() => runtime.discover());
   gladys.onPoll((device) => runtime.poll(device));
+  gladys.onDeviceCreated((device) => runtime.deviceCreated(device));
   gladys.onAction('test_connection', () => runtime.testConnection());
   // Raced against a deadline: a slow PBS gives a loading card instead of a card
   // the core gives up on for good after 15 s (src/widgetDeadline.js).

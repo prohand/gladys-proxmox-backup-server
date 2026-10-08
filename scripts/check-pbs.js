@@ -8,8 +8,8 @@
 //   PBS_TOKEN_SECRET='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' \
 //   npm run check:pbs
 //
-// Optional: PBS_NODE (default localhost), PBS_VERIFY_TLS=false for a
-// self-signed certificate, PBS_TIMEZONE (default UTC) for the task dates. Read-only: only GET routes are called.
+// Optional: PBS_NODE (default localhost), PBS_FINGERPRINT=AA:BB:... to pin a
+// self-signed certificate (or PBS_VERIFY_TLS=false on a trusted network), PBS_TIMEZONE (default UTC) for the task dates. Read-only: only GET routes are called.
 // -----------------------------------------------------------------------------
 import { normalizeConfig } from '../src/config.js';
 import { fetchTasks, ProxmoxClient, readInventory, taskDetails } from '../src/proxmox.js';
@@ -20,6 +20,7 @@ const config = normalizeConfig({
   api_token_secret: process.env.PBS_TOKEN_SECRET,
   node: process.env.PBS_NODE,
   verify_tls: process.env.PBS_VERIFY_TLS !== 'false',
+  tls_fingerprint: process.env.PBS_FINGERPRINT,
   timezone: process.env.PBS_TIMEZONE,
 });
 
@@ -74,7 +75,7 @@ for (const { store } of stores) {
     console.log('  both routes agree');
   }
 
-  const tasks = await timed('task history', () => fetchTasks(client, store));
+  const tasks = await timed('task history', () => fetchTasks(client, store, undefined, log));
   for (const type of ['verify', 'gc', 'prune']) {
     const { status, date } = taskDetails(tasks, type, config.date_format, config.timezone);
     console.log(`  last ${type}: ${status} — ${date}`);

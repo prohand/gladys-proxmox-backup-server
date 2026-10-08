@@ -45,6 +45,20 @@ test('manifest describes a read-only device integration', async () => {
   assert.equal(timezone.default, DEFAULT_CONFIG.timezone);
 });
 
+test('every declared default matches DEFAULT_CONFIG, and the fingerprint field exists', async () => {
+  const manifest = await readManifest();
+  for (const field of manifest.config_schema)
+    if ('default' in field) assert.deepEqual(field.default, DEFAULT_CONFIG[field.key], field.key);
+  const fingerprint = manifest.config_schema.find(({ key }) => key === 'tls_fingerprint');
+  assert.equal(fingerprint.type, 'string');
+  assert.equal(fingerprint.required, false);
+  assert.ok(fingerprint.placeholder.en && fingerprint.placeholder.fr);
+  assert.ok(Object.hasOwn(DEFAULT_CONFIG, 'tls_fingerprint'));
+  const keys = manifest.config_schema.map(({ key }) => key);
+  // Read before the TLS switch it overrides.
+  assert.ok(keys.indexOf('tls_fingerprint') < keys.indexOf('verify_tls'));
+});
+
 async function readManifest() {
   return JSON.parse(
     await readFile(new URL('../gladys-assistant-integration.json', import.meta.url)),

@@ -3,8 +3,11 @@ import test from 'node:test';
 import {
   buildDatastoreDevice,
   buildDatastoreStates,
+  DatastoreMissingError,
   GLADYS_POLL_FREQUENCY_MS,
   isPollDue,
+  readDatastore,
+  summarizeDatastore,
 } from '../src/datastores.js';
 
 const gladys = {
@@ -107,7 +110,7 @@ test('every feature carries a numeric range, text ones included', () => {
   );
 });
 
-test('an offline datastore publishes zeros instead of NaN', () => {
+test('an offline datastore publishes no capacity at all instead of a fake 0', () => {
   const states = buildDatastoreStates(
     gladys,
     { store: 'offline' },
@@ -117,10 +120,12 @@ test('an offline datastore publishes zeros instead of NaN', () => {
   );
   const state = (key) => states.find((item) => item.device_feature_external_id.endsWith(`:${key}`));
   assert.deepEqual(
-    ['usage', 'total', 'used', 'snapshots'].map((key) => state(key).state),
-    [0, 0, 0, 0],
+    ['usage', 'total', 'used'].map((key) => state(key)),
+    [undefined, undefined, undefined],
   );
+  assert.equal(state('snapshots').state, 0);
   assert.equal(state('backup-stale').state, 1);
+  assert.ok(states.every((item) => item.state === undefined || Number.isFinite(item.state)));
 });
 
 test('a fresh backup clears the stale sensor', () => {
@@ -135,4 +140,41 @@ test('a fresh backup clears the stale sensor', () => {
   const state = (key) => states.find((item) => item.device_feature_external_id.endsWith(`:${key}`));
   assert.equal(state('backup-stale').state, 0);
   assert.equal(state('usage').state, 50);
+});
+
+test('readDatastore reads the shared usage first and skips a datastore PBS no longer lists', async () => {
+  const calls = [];
+  const client = {
+    config: { base_url: 'https://pbs:8007' },
+    getGroups: () => calls.push('groups') && Promise.resolve([]),
+    getTasks: () => calls.push('tasks') && Promise.resolve([]),
+  };
+  let usageReads = 0;
+  const readUsage = () => {
+    usageReads += 1;
+    return Promise.resolve([{ store: 'kept', total: 1e9, used: 5e8 }]);
+  };
+  await assert.rejects(
+    readDatastore('gone', { date_format: 'iso', timezone: 'UTC' }, 0, { client, readUsage }),
+    (error) => error instanceof DatastoreMissingError && error.messages.fr.includes('gone'),
+  );
+  assert.deepEqual(calls, []);
+
+  const summary = await readDatastore('kept', { date_format: 'iso', timezone: 'UTC' }, 0, {
+    client,
+    readUsage,
+  });
+  assert.equal(summary.usagePercent, 50);
+  assert.equal(usageReads, 2);
+  assert.ok(calls.includes('groups') && calls.includes('tasks'));
+});
+
+test('scene outputs say an offline capacity is unknown instead of reporting 0 %', async () => {
+  const { backupReportOutputs, datastoreStatusOutputs } = await import('../src/scenes.js');
+  const offline = summarizeDatastore({ store: 'offline' }, { snapshotCount: 1 }, [], 0);
+  const online = summarizeDatastore({ store: 'nas', total: 1e9, used: 2.5e8 }, {}, [], 0);
+  assert.equal(datastoreStatusOutputs(offline).usage_percent, null);
+  const report = backupReportOutputs([offline, online], new Map(), 'fr');
+  assert.equal(report.max_usage_percent, 25);
+  assert.match(report.summary, /offline : .*capacité inconnue/);
 });

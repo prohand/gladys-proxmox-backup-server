@@ -15,6 +15,7 @@ test('normalizes URL and form values', () => {
       node: 'localhost',
       poll_frequency: MIN_POLL_FREQUENCY_SECONDS,
       verify_tls: false,
+      tls_fingerprint: '',
       date_format: 'iso',
       timezone: 'UTC',
       base_url: 'https://pbs:8007',
@@ -47,4 +48,10 @@ test('keeps a valid time zone and falls back to UTC otherwise', () => {
   assert.equal(normalizeTimeZone(''), 'UTC');
   assert.equal(normalizeTimeZone(undefined), 'UTC');
   assert.equal(normalizeTimeZone('Mars/Olympus'), 'UTC');
+});
+
+test('keeps the pinned certificate fingerprint as typed, trimmed', () => {
+  assert.equal(DEFAULT_CONFIG.tls_fingerprint, '');
+  assert.equal(normalizeConfig({ tls_fingerprint: ' AA:BB ' }).tls_fingerprint, 'AA:BB');
+  assert.equal(normalizeConfig({}).tls_fingerprint, '');
 });

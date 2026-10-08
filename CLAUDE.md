@@ -65,10 +65,19 @@ Run all three locally before pushing; formatting is a hard CI gate.
 
 `readInventory()` prefers `/admin/datastore/{store}/groups` (`backup-count` + `last-backup`)
 over listing every snapshot, and falls back to the snapshot list only when those counters are
-missing — and logs a warning when it does, so the expensive path is never silent.
-`fetchTasks()` pages the task history until the newest verify, GC, and prune tasks
-have been seen (`TASK_MAX_PAGES` × `TASK_PAGE_SIZE`). Keep both cheap: a refresh runs for
+missing or the server answers 400/404 — never on a timeout, a network or an auth error, which
+would hand a struggling PBS its heaviest request. It logs a warning when it falls back, so the
+expensive path is never silent. `fetchTasks()` asks one `typefilter` query per task type
+(`TYPED_TASK_LIMIT`), and only pages the whole history (`TASK_MAX_PAGES` × `TASK_PAGE_SIZE`) on a
+server that refuses the filter with a 400, remembered per server. `/status/datastore-usage` is
+read once and shared by every datastore of a cycle. Keep all of it cheap: a refresh runs for
 every datastore, forever.
+
+`ProxmoxClient.request` bounds the WHOLE exchange (`REQUEST_TIMEOUT_MS`), caps the body
+(`MAX_RESPONSE_BYTES`), rejects on a response cut mid-way, and throws a typed `ProxmoxError`
+(`kind`: config, auth, permission, tls, network, timeout, http, parse) carrying an `{ en, fr }`
+message. An optional SHA-256 `tls_fingerprint` is checked on the TLS socket before the request
+is written, so the token never reaches a certificate that does not match.
 
 ## Polling model
 

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { validateWidgetContent } from '@gladysassistant/integration-sdk';
-import { summarizeDatastore } from '../src/datastores.js';
+import { DatastoreMissingError, summarizeDatastore } from '../src/datastores.js';
+import { ProxmoxError } from '../src/proxmox.js';
 import { createRuntime, registerRuntime } from '../src/runtime.js';
 
 function fakeGladys(config = {}) {
@@ -206,6 +207,7 @@ test('registerRuntime wires every SDK lifecycle hook', () => {
   const gladys = {
     onScanRequest: () => registered.push('scan'),
     onPoll: () => registered.push('poll'),
+    onDeviceCreated: () => registered.push('deviceCreated'),
     onAction: (key) => registered.push(`action:${key}`),
     onWidgetGet: (key) => registered.push(`widget:${key}`),
     onWidgetAction: (key) => registered.push(`widgetAction:${key}`),
@@ -218,6 +220,7 @@ test('registerRuntime wires every SDK lifecycle hook', () => {
   assert.deepEqual(registered, [
     'scan',
     'poll',
+    'deviceCreated',
     'action:test_connection',
     'widget:datastore',
     'widget:overview',
@@ -563,4 +566,176 @@ test('an unknown device asks for a discovery once per refresh interval', async (
   clock += CONFIG.poll_frequency * 1000;
   await runtime.poll(deleted);
   assert.equal(discoveries, 3);
+});
+
+test('a datastore removed from PBS turns the status green again and is looked up ever less often', async () => {
+  const gladys = fakeGladys(CONFIG);
+  let clock = NOW;
+  let listed = [{ store: 'one' }, { store: 'gone' }];
+  let discoveries = 0;
+  const reads = [];
+  const runtime = createRuntime(gladys, {
+    listDatastores: () => {
+      discoveries += 1;
+      return Promise.resolve(listed);
+    },
+    readSummary: (store) => {
+      reads.push(store);
+      if (store === 'gone') return Promise.reject(new Error('PBS API request timed out'));
+      return Promise.resolve(summary({ store }));
+    },
+    now: () => clock,
+  });
+  await runtime.updateConfig(CONFIG);
+  const gone = { external_id: 'ext:test:pbs-datastore:gone' };
+
+  await assert.rejects(runtime.poll(gone), /timed out/);
+  assert.equal(gladys.calls.connectionStatus.at(-1).connected, false);
+
+  // The datastore is deleted on PBS; a scan (or any discovery) forgets its error.
+  listed = [{ store: 'one' }];
+  await runtime.discover();
+  assert.equal(gladys.calls.connectionStatus.at(-1).connected, true);
+
+  // Its device lives on in Gladys and keeps being polled every minute: the
+  // lookups back off (1, 2, 4 refresh intervals) and the datastore is never read.
+  discoveries = 0;
+  reads.length = 0;
+  const lookups = [];
+  for (let minute = 0; minute < 8 * 15 + 1; minute += 1) {
+    const before = discoveries;
+    await runtime.poll(gone);
+    if (discoveries > before) lookups.push(minute);
+    clock += 60_000;
+  }
+  assert.deepEqual(lookups, [0, 15, 45, 105]);
+  assert.deepEqual(reads, []);
+});
+
+test('a datastore PBS no longer lists is dropped at once, without an unreachable event', async () => {
+  const gladys = fakeGladys(CONFIG);
+  let listed = [{ store: 'one' }];
+  let clock = NOW;
+  const runtime = createRuntime(gladys, {
+    listDatastores: () => Promise.resolve(listed),
+    readSummary: (store, config, at, { readUsage }) =>
+      readUsage().then((stores) =>
+        stores.some((item) => item.store === store)
+          ? summary({ store })
+          : Promise.reject(new DatastoreMissingError(store)),
+      ),
+    now: () => clock,
+  });
+  await runtime.updateConfig(CONFIG);
+  listed = [];
+  clock += 60_000;
+  await runtime.poll({ external_id: DEVICE });
+  assert.deepEqual(gladys.calls.events, []);
+  assert.deepEqual(gladys.calls.connectionStatus, []);
+  assert.deepEqual(gladys.calls.discovered.at(-1), []);
+});
+
+test('a Gladys failure to store the states is not reported as PBS unreachable', async () => {
+  const gladys = fakeGladys(CONFIG);
+  let refuse = true;
+  gladys.publishStates = (states) => {
+    if (refuse) return Promise.reject(new Error('Gladys is restarting'));
+    gladys.calls.states.push(states);
+    return Promise.resolve();
+  };
+  let reads = 0;
+  const runtime = createRuntime(gladys, {
+    listDatastores: () => Promise.resolve([{ store: 'one' }]),
+    readSummary: () => {
+      reads += 1;
+      return Promise.resolve(summary());
+    },
+    now: () => NOW,
+  });
+  await runtime.start();
+
+  await assert.rejects(runtime.poll({ external_id: DEVICE }), /Gladys did not store/);
+  assert.deepEqual(gladys.calls.events, []);
+  assert.ok(gladys.calls.connectionStatus.every(({ connected }) => connected));
+
+  // Retried on the next tick rather than a full refresh interval later.
+  refuse = false;
+  await runtime.poll({ external_id: DEVICE });
+  assert.equal(reads, 2);
+  assert.equal(gladys.calls.states.length, 1);
+});
+
+test('concurrent reads of one datastore share a single PBS read', async () => {
+  const gladys = fakeGladys(CONFIG);
+  let reads = 0;
+  let release;
+  const runtime = createRuntime(gladys, {
+    listDatastores: () => Promise.resolve([{ store: 'one' }]),
+    readSummary: () => {
+      reads += 1;
+      return new Promise((resolve) => {
+        release = () => resolve(summary());
+      });
+    },
+    now: () => NOW,
+  });
+  await runtime.updateConfig(CONFIG);
+
+  const pending = [
+    runtime.datastoreWidget({ settings: { datastore: DEVICE } }),
+    runtime.getDatastoreStatus({ datastore: DEVICE }),
+    runtime.poll({ external_id: DEVICE }),
+  ];
+  await new Promise((resolve) => setImmediate(resolve));
+  release();
+  await Promise.all(pending);
+  assert.equal(reads, 1);
+  assert.equal(gladys.calls.states.length, 1);
+});
+
+test('the datastores of one tick share one datastore-usage read', async () => {
+  const gladys = fakeGladys(CONFIG);
+  let clock = NOW;
+  let usageReads = 0;
+  const runtime = createRuntime(gladys, {
+    listDatastores: () => {
+      usageReads += 1;
+      return Promise.resolve([{ store: 'one' }, { store: 'two' }]);
+    },
+    readSummary: (store, config, at, { readUsage }) => readUsage().then(() => summary({ store })),
+    now: () => clock,
+  });
+  await runtime.updateConfig(CONFIG);
+  clock += 900_000;
+  usageReads = 0;
+  await runtime.poll({ external_id: 'ext:test:pbs-datastore:one' });
+  await runtime.poll({ external_id: 'ext:test:pbs-datastore:two' });
+  assert.equal(usageReads, 1);
+  assert.equal(gladys.calls.states.length, 2);
+});
+
+test('a device created in Gladys is read at once, even inside the refresh interval', async () => {
+  const gladys = fakeGladys(CONFIG);
+  let reads = 0;
+  const runtime = createRuntime(gladys, {
+    listDatastores: () => Promise.resolve([{ store: 'one' }]),
+    readSummary: () => {
+      reads += 1;
+      return Promise.resolve(summary());
+    },
+    now: () => NOW,
+  });
+  await runtime.poll({ external_id: DEVICE });
+  await runtime.deviceCreated({ external_id: DEVICE });
+  assert.equal(reads, 2);
+  assert.equal(gladys.calls.states.length, 2);
+});
+
+test('test_connection reports a PBS error in both languages', async () => {
+  const gladys = fakeGladys(CONFIG);
+  const runtime = createRuntime(gladys, {
+    listDatastores: () =>
+      Promise.reject(new ProxmoxError('auth', { en: 'token refused', fr: 'jeton refusé' })),
+  });
+  await assert.rejects(runtime.testConnection(), { message: 'token refused / jeton refusé' });
 });
