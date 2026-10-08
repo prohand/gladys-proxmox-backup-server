@@ -6,6 +6,36 @@ All notable changes to this integration are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- New optional `TLS certificate fingerprint` setting: pins the SHA-256 fingerprint of the PBS
+  certificate, so a self-signed certificate is accepted only if it is exactly that one. It is
+  checked before the API token is sent. The documentation now warns that an `http://` URL sends
+  the token in clear text.
+
+### Fixed
+
+- A connection cut or stalled in the middle of a PBS answer no longer leaves the refresh, the
+  widgets and the scene actions waiting forever: every request ends within 15 s, answers above
+  8 MB are refused, and the connection status names the cause (token refused, missing role,
+  certificate, network, timeout) in both languages.
+- A datastore deleted on PBS no longer keeps the connection status red, is no longer re-read every
+  minute, and no longer fires `PBS unreachable`; its leftover device is looked up ever less often
+  (up to once a day).
+- A Gladys failure to store the states is no longer reported as `PBS unreachable`.
+- An offline or unmounted datastore no longer publishes a capacity of 0: nothing is published and
+  the widgets show the capacity as unavailable.
+- A timeout or a network error while reading the backup groups no longer falls back to the much
+  heavier snapshot list (only a 400 or 404 does).
+- A device added from the Discovery tab is read at once instead of at the next refresh.
+
+### Changed
+
+- Fewer PBS requests: one `/status/datastore-usage` read shared by the datastores of a refresh,
+  one filtered task read per task type instead of up to four pages of 500 tasks, and concurrent
+  reads of one datastore (poll, widget, scene action) merged into one.
+- Docker image: the npm cache is dropped from the image; CI builds the image on pull requests.
+
 ## [2.3.0] - 2026-10-07
 
 ### Fixed
