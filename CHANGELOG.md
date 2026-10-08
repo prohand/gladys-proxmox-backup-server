@@ -6,6 +6,8 @@ All notable changes to this integration are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-10-08
+
 ### Security
 
 - New optional `TLS certificate fingerprint` setting: pins the SHA-256 fingerprint of the PBS
@@ -179,7 +181,8 @@ All notable changes to this integration are documented here. The format follows
 - Verify, garbage collection and prune status and date published as separate features.
 - Refresh interval clamped to database-safe limits.
 
-[Unreleased]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.1.2...v2.2.0
 [2.1.2]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.1.1...v2.1.2
