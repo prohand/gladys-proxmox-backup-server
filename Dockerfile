@@ -17,9 +17,10 @@ WORKDIR /app
 
 # Install the PROD dependencies first (better build cache). `npm ci` is used
 # alone on purpose: falling back to `npm install` would silently ignore the
-# lockfile and make the published image non-reproducible.
+# lockfile and make the published image non-reproducible. The npm cache is
+# dropped in the same layer: it is never read again at runtime.
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev && npm cache clean --force
 
 # Then the integration code.
 COPY index.js ./

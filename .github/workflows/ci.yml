@@ -7,8 +7,8 @@
 #   2. ESLint    -> catch real mistakes (undefined vars, dead code, ...);
 #   3. Tests     -> `node --test`, the built-in runner (no extra dependency).
 #
-# Runs on Node 24, the version the Docker image ships with (see the Dockerfile),
-# so the check exercises the exact runtime the integration runs on.
+# Runs on Node 24 only: it is both the `engines` floor and the version the
+# Docker image ships with, so the check exercises the exact runtime.
 # -----------------------------------------------------------------------------
 name: CI
 
@@ -43,6 +43,27 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+  docker:
+    # Builds the image on pull requests without pushing it, so a broken
+    # Dockerfile (a file missing from the COPY list, a failing `npm ci`) shows up
+    # before a release tries to publish it.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    name: Docker build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build (amd64, not pushed)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
 
   store:
     # The store indexer's own admission checks (manifest schema, version
