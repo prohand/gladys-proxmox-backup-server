@@ -6,6 +6,10 @@ All notable changes to this integration are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The manifest declares its transport: `local` (the PBS API is read directly on the network).
+
 ## [2.4.0] - 2026-10-08
 
 ### Security
