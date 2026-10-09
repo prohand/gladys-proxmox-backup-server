@@ -6,6 +6,8 @@ All notable changes to this integration are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-10-09
+
 ### Added
 
 - The manifest declares its transport: `local` (the PBS API is read directly on the network).
@@ -185,7 +187,8 @@ All notable changes to this integration are documented here. The format follows
 - Verify, garbage collection and prune status and date published as separate features.
 - Refresh interval clamped to database-safe limits.
 
-[Unreleased]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.1.2...v2.2.0
