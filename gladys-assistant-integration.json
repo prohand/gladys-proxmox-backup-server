@@ -11,6 +11,7 @@
   "gladys_version": ">=5.1.0",
   "cover_image": "https://raw.githubusercontent.com/prohand/gladys-proxmox-backup-server/main/cover.png",
   "categories": ["services", "network"],
+  "transports": ["local"],
   "config_schema": [
     {
       "key": "intro",

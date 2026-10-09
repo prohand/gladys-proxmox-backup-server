@@ -128,3 +128,10 @@ test('scene events and outputs only carry declared keys', async () => {
     declared('scene_actions', 'get_backup_report', 'outputs').sort(),
   );
 });
+
+test('the manifest declares the transports used (the PBS API is read on the local network)', async () => {
+  const manifest = JSON.parse(
+    await readFile(new URL('../gladys-assistant-integration.json', import.meta.url)),
+  );
+  assert.deepEqual(manifest.transports, ['local']);
+});
