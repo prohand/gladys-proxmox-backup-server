@@ -2,6 +2,7 @@ import {
   DEVICE_FEATURE_CATEGORIES,
   DEVICE_FEATURE_TYPES,
   DEVICE_FEATURE_UNITS,
+  DEVICE_POLL_FREQUENCIES,
 } from '@gladysassistant/integration-sdk';
 import {
   fetchTasks,
@@ -13,7 +14,11 @@ import {
 } from './proxmox.js';
 
 export const STALE_AFTER_SECONDS = 26 * 60 * 60;
-export const GLADYS_POLL_FREQUENCY_MS = 60 * 1000;
+// Gladys only accepts a device poll_frequency among DEVICE_POLL_FREQUENCIES (in
+// ms, one minute at the slowest; the SDK mirrors the core enum) and rejects the
+// whole discovery otherwise: the device is polled every minute and isPollDue()
+// throttles the PBS reads down to the configured interval.
+export const GLADYS_POLL_FREQUENCY_MS = DEVICE_POLL_FREQUENCIES.EVERY_MINUTES;
 const MAX_NUMERIC_STATE = 1e15;
 const CAT = DEVICE_FEATURE_CATEGORIES;
 const TYPE = DEVICE_FEATURE_TYPES;
