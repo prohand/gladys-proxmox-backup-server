@@ -1,7 +1,7 @@
 import { logger } from '@gladysassistant/integration-sdk';
 import { withPullDeadline } from './widgetDeadline.js';
 import { normalizeConfig } from './config.js';
-import { eachLanguage, LANGUAGES, pickLanguage } from './i18n.js';
+import { eachLanguage, pickLanguage } from './i18n.js';
 import {
   buildDatastoreDevice,
   DatastoreMissingError,
@@ -398,11 +398,11 @@ export function createRuntime(gladys, dependencies = {}) {
     try {
       count = await discover();
     } catch (error) {
-      // A thrown action reaches the Configuration screen as plain text: every
-      // language travels in one string, each distinct text once.
-      const messages = error?.messages ?? { en: error?.message };
-      const texts = [...new Set(LANGUAGES.map((language) => messages[language]).filter(Boolean))];
-      throw new Error(texts.length ? texts.join(' / ') : String(error?.message), { cause: error });
+      // A thrown action reaches the Configuration screen as plain text: English
+      // and French travel in one string, as they always did. German and Spanish
+      // stay out of that red box by choice; every returned text carries them.
+      const { en, fr } = error?.messages ?? { en: error?.message, fr: error?.message };
+      throw new Error(en === fr ? en : `${en} / ${fr}`, { cause: error });
     }
     return {
       en: `Connection successful: ${count} datastore(s) found.`,
@@ -446,7 +446,7 @@ export function createRuntime(gladys, dependencies = {}) {
       .setConnectionStatus(false, {
         en: 'Cannot connect to Proxmox Backup Server. Check configuration and logs.',
         fr: 'Connexion à Proxmox Backup Server impossible. Vérifiez la configuration et les logs.',
-        de: 'Keine Verbindung zu Proxmox Backup Server möglich. Prüfen Sie die Konfiguration und die Logs.',
+        de: 'Keine Verbindung zu Proxmox Backup Server möglich. Prüfe die Konfiguration und die Logs.',
         es: 'No se puede conectar con Proxmox Backup Server. Compruebe la configuración y los registros.',
       })
       .catch(() => {});

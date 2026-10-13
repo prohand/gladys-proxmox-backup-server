@@ -69,7 +69,7 @@ These require Gladys **5.1.0** or later. They only read PBS: no button, trigger,
 
 ### Dashboard widgets
 
-Add them from the dashboard editor, in the widget list of this integration.
+Add them from **Dashboard → Edit → New widget**, under **Integration widgets**.
 
 | Widget        | Settings                                | Content                                                                                                                                                |
 | ------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -105,8 +105,8 @@ They show up in the scene editor, in the "Integrations" category. Each filter is
 | Get PBS backup report    | `Read PBS now` (default: off), report language (en/fr/de/es) | `datastore_count`, `stale_count`, `failed_task_count`, `unreachable_count`, `max_usage_percent`, `all_ok`, `summary`                                                                                                                                |
 
 - Without `Read PBS now`, the action answers from the last refresh and costs nothing on PBS.
-- `summary` is a ready-to-send text, one line per datastore. Example for a daily report: "Every day at 8:00" → "Get PBS backup report" → "Send a message" with the `summary` output.
-- Example alert: "PBS maintenance task finished" filtered on result `error` → "Send a message": `PBS {{triggerEvent.data.task_type}} failed on {{triggerEvent.data.datastore_name}}: {{triggerEvent.data.status}}`.
+- `summary` is a ready-to-send text, one line per datastore. Example for a daily report: "Scheduled trigger" (every day at 8:00) → "Get PBS backup report" → "Send Message" with the `summary` output.
+- Example alert: "PBS maintenance task finished" filtered on result `error` → "Send Message": `PBS {{triggerEvent.data.task_type}} failed on {{triggerEvent.data.datastore_name}}: {{triggerEvent.data.status}}`.
 
 ## Behaviour notes
 
@@ -118,11 +118,11 @@ They show up in the scene editor, in the "Integrations" category. Each filter is
 - A refresh that fails (network error, timeout, PBS restart) is retried on the next one-minute Gladys tick instead of waiting a full refresh interval. At startup, the connection is retried four times with an exponential backoff before the integration reports itself as disconnected.
 - A refresh that PBS answered but Gladys could not store (Gladys restarting, for example) is retried on the next tick too; it is not reported as `PBS unreachable`.
 - A datastore deleted or renamed on PBS is dropped from the monitored list as soon as PBS stops listing it, without a `PBS unreachable` event, and no longer keeps the connection status red. Its device left in Gladys is looked up again after one refresh interval, then twice as long each time, up to once a day.
-- A device just added from the Discovery tab is read right away instead of at the next refresh.
+- A device just added from the Discover tab is read right away instead of at the next refresh.
 
 ## Checking which inventory route is used
 
-The integration prefers the cheap `groups` route and falls back to the full snapshot list; the fallback is logged as a warning in the container logs (`Falling back to the snapshot list for datastore ...`, with the PBS error that caused it).
+The integration prefers the cheap `groups` route and falls back to the full snapshot list; the fallback is logged as a warning in the integration's **Logs** tab (`Falling back to the snapshot list for datastore ...`, with the PBS error that caused it).
 
 To check it against your server without installing anything in Gladys, run the read-only diagnostic from a clone of this repository:
 

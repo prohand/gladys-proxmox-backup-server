@@ -27,7 +27,7 @@
       "description": {
         "en": "Create a dedicated API token with the read-only DatastoreAudit and Audit roles. See the documentation for the exact commands.",
         "fr": "Créez un jeton API dédié avec les rôles de lecture seule DatastoreAudit et Audit. Consultez la documentation pour les commandes exactes.",
-        "de": "Erstellen Sie ein eigenes API-Token mit den schreibgeschützten Rollen DatastoreAudit und Audit. Die genauen Befehle finden Sie in der Dokumentation.",
+        "de": "Erstelle ein eigenes API-Token mit den schreibgeschützten Rollen DatastoreAudit und Audit. Die genauen Befehle findest du in der Dokumentation.",
         "es": "Cree un token de API dedicado con los roles de solo lectura DatastoreAudit y Audit. Consulte la documentación para ver los comandos exactos."
       },
       "links": [
@@ -54,7 +54,7 @@
       "description": {
         "en": "For example: https://pbs.example.com:8007. Avoid http://: it sends the API token in clear text.",
         "fr": "Par exemple : https://pbs.example.com:8007. Évitez http:// : le jeton API circule alors en clair.",
-        "de": "Zum Beispiel: https://pbs.example.com:8007. Vermeiden Sie http://: Das API-Token wird dann im Klartext übertragen.",
+        "de": "Zum Beispiel: https://pbs.example.com:8007. Vermeide http://: Das API-Token wird dann im Klartext übertragen.",
         "es": "Por ejemplo: https://pbs.example.com:8007. Evite http://: el token de API viaja entonces sin cifrar."
       },
       "required": true
@@ -166,7 +166,7 @@
       "description": {
         "en": "Select how task dates are displayed, in the time zone set below.",
         "fr": "Sélectionnez le format d'affichage des dates des tâches, dans le fuseau horaire indiqué ci-dessous.",
-        "de": "Wählen Sie, wie die Daten der Aufgaben angezeigt werden, in der unten festgelegten Zeitzone.",
+        "de": "Wähle, wie die Daten der Aufgaben angezeigt werden, in der unten festgelegten Zeitzone.",
         "es": "Seleccione cómo se muestran las fechas de las tareas, en la zona horaria indicada abajo."
       },
       "display": "dropdown",

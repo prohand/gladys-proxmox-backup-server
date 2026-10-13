@@ -81,7 +81,7 @@ function httpError(status, path, body) {
       {
         en: 'PBS refused the API token (HTTP 401): check the token ID and its secret.',
         fr: "PBS a refusé le jeton API (HTTP 401) : vérifiez l'identifiant du jeton et son secret.",
-        de: 'PBS hat das API-Token abgelehnt (HTTP 401): Prüfen Sie die Token-ID und ihr Secret.',
+        de: 'PBS hat das API-Token abgelehnt (HTTP 401): Prüfe die Token-ID und ihr Secret.',
         es: 'PBS ha rechazado el token de API (HTTP 401): compruebe el ID del token y su secreto.',
       },
       { status, path },
@@ -144,7 +144,7 @@ function transportError(url, path, error) {
       {
         en: `PBS presents a certificate this container does not trust (${code}): pin its SHA-256 fingerprint in the configuration (or turn TLS verification off on a trusted network).`,
         fr: `PBS présente un certificat auquel ce conteneur ne fait pas confiance (${code}) : épinglez son empreinte SHA-256 dans la configuration (ou désactivez la vérification TLS sur un réseau de confiance).`,
-        de: `PBS legt ein Zertifikat vor, dem dieser Container nicht vertraut (${code}): Hinterlegen Sie seinen SHA-256-Fingerabdruck in der Konfiguration (oder deaktivieren Sie die TLS-Prüfung in einem vertrauenswürdigen Netzwerk).`,
+        de: `PBS legt ein Zertifikat vor, dem dieser Container nicht vertraut (${code}): Hinterlege seinen SHA-256-Fingerabdruck in der Konfiguration (oder deaktiviere die TLS-Prüfung in einem vertrauenswürdigen Netzwerk).`,
         es: `PBS presenta un certificado en el que este contenedor no confía (${code}): fije su huella SHA-256 en la configuración (o desactive la verificación TLS en una red de confianza).`,
       },
       { path },
@@ -155,7 +155,7 @@ function transportError(url, path, error) {
       {
         en: `Cannot resolve the host name ${url.hostname} (${code}): check the server URL.`,
         fr: `Impossible de résoudre le nom d'hôte ${url.hostname} (${code}) : vérifiez l'URL du serveur.`,
-        de: `Der Hostname ${url.hostname} kann nicht aufgelöst werden (${code}): Prüfen Sie die Server-URL.`,
+        de: `Der Hostname ${url.hostname} kann nicht aufgelöst werden (${code}): Prüfe die Server-URL.`,
         es: `No se puede resolver el nombre de host ${url.hostname} (${code}): compruebe la URL del servidor.`,
       },
       { path },
@@ -166,7 +166,7 @@ function transportError(url, path, error) {
       {
         en: `${target} refused the connection (ECONNREFUSED): check the port, PBS listens on 8007 by default.`,
         fr: `${target} a refusé la connexion (ECONNREFUSED) : vérifiez le port, PBS écoute sur 8007 par défaut.`,
-        de: `${target} hat die Verbindung abgelehnt (ECONNREFUSED): Prüfen Sie den Port, PBS lauscht standardmäßig auf 8007.`,
+        de: `${target} hat die Verbindung abgelehnt (ECONNREFUSED): Prüfe den Port, PBS lauscht standardmäßig auf 8007.`,
         es: `${target} ha rechazado la conexión (ECONNREFUSED): compruebe el puerto, PBS escucha en el 8007 de forma predeterminada.`,
       },
       { path },
@@ -177,7 +177,7 @@ function transportError(url, path, error) {
       {
         en: `${target} is unreachable (${code}): check that the server is up and reachable from Gladys.`,
         fr: `${target} est injoignable (${code}) : vérifiez que le serveur est démarré et accessible depuis Gladys.`,
-        de: `${target} ist nicht erreichbar (${code}): Prüfen Sie, ob der Server läuft und von Gladys aus erreichbar ist.`,
+        de: `${target} ist nicht erreichbar (${code}): Prüfe, ob der Server läuft und von Gladys aus erreichbar ist.`,
         es: `${target} no es accesible (${code}): compruebe que el servidor está en marcha y es accesible desde Gladys.`,
       },
       { path },
@@ -268,7 +268,7 @@ export class ProxmoxClient {
       throw configError({
         en: 'PBS connection is not configured: fill in the server URL, the token ID and its secret.',
         fr: 'La connexion à PBS n’est pas configurée : renseignez l’URL du serveur, l’identifiant du jeton et son secret.',
-        de: 'Die Verbindung zu PBS ist nicht konfiguriert: Geben Sie die Server-URL, die Token-ID und ihr Secret ein.',
+        de: 'Die Verbindung zu PBS ist nicht konfiguriert: Gib die Server-URL, die Token-ID und ihr Secret ein.',
         es: 'La conexión con PBS no está configurada: indique la URL del servidor, el ID del token y su secreto.',
       });
     let url;
@@ -300,7 +300,7 @@ export class ProxmoxClient {
         throw configError({
           en: 'A certificate fingerprint is pinned but the server URL uses http://: use https://.',
           fr: "Une empreinte de certificat est épinglée mais l'URL du serveur utilise http:// : utilisez https://.",
-          de: 'Ein Zertifikat-Fingerabdruck ist hinterlegt, aber die Server-URL verwendet http://: Verwenden Sie https://.',
+          de: 'Ein Zertifikat-Fingerabdruck ist hinterlegt, aber die Server-URL verwendet http://: Verwende https://.',
           es: 'Hay una huella de certificado fijada, pero la URL del servidor usa http://: use https://.',
         });
       if (tlsMode.fingerprint.length !== 64)

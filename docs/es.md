@@ -69,7 +69,7 @@ Requieren Gladys **5.1.0** o posterior. Solo leen PBS: ningún botón, activador
 
 ### Widgets del panel
 
-Añádalos desde «Editar panel», en la lista de widgets de esta integración.
+Añádalos desde **Panel → Editar → Nuevo widget**, en **Widgets de integraciones**.
 
 | Widget                  | Configuración                                          | Contenido                                                                                                                                                                                                     |
 | ----------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -105,7 +105,7 @@ Aparecen en el editor de escenas, en la categoría «Integraciones». Cada filtr
 | Obtener el informe de copias de seguridad PBS | `Leer PBS ahora` (por defecto: desactivado), idioma del informe (en/fr/de/es) | `datastore_count`, `stale_count`, `failed_task_count`, `unreachable_count`, `max_usage_percent`, `all_ok`, `summary`                                                                                                                                |
 
 - Sin `Leer PBS ahora`, la acción responde con los valores de la última actualización y no supone ninguna carga para PBS.
-- `summary` es un texto listo para enviar, con una línea por datastore. Ejemplo de informe diario: «Cada día» a las 8:00 → «Obtener el informe de copias de seguridad PBS» → «Enviar mensaje» con la salida `summary`.
+- `summary` es un texto listo para enviar, con una línea por datastore. Ejemplo de informe diario: «Activador programado» (cada día a las 8:00) → «Obtener el informe de copias de seguridad PBS» → «Enviar mensaje» con la salida `summary`.
 - Ejemplo de alerta: «Tarea de mantenimiento PBS finalizada» filtrada por el resultado `error` → «Enviar mensaje»: `PBS {{triggerEvent.data.task_type}} ha fallado en {{triggerEvent.data.datastore_name}}: {{triggerEvent.data.status}}`.
 
 ## Notas sobre el funcionamiento
@@ -122,7 +122,7 @@ Aparecen en el editor de escenas, en la categoría «Integraciones». Cada filtr
 
 ## Comprobar qué ruta de inventario se usa
 
-La integración prefiere la ruta económica `groups` y recurre a la lista completa de snapshots; ese recurso se registra como advertencia en los registros del contenedor (`Falling back to the snapshot list for datastore ...`, con el error de PBS que lo provocó).
+La integración prefiere la ruta económica `groups` y recurre a la lista completa de snapshots; ese recurso se registra como advertencia en la pestaña **Registros** de la integración (`Falling back to the snapshot list for datastore ...`, con el error de PBS que lo provocó).
 
 Para comprobarlo con su servidor sin instalar nada en Gladys, ejecute el diagnóstico de solo lectura desde un clon de este repositorio:
 

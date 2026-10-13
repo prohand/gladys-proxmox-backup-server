@@ -56,7 +56,9 @@ Run all three locally before pushing; formatting is a hard CI gate.
 - User-facing text is `{ en, fr, de, es }` (`LANGUAGES` in `src/i18n.js`): manifest
   labels/descriptions, action results, connection-status messages, widget texts, the report
   text. `docs/en.md`, `docs/fr.md`, `docs/de.md`, `docs/es.md` stay in sync. A change that
-  touches one language must touch the others.
+  touches one language must touch the others. One exception: the error a failed
+  `test_connection` THROWS reaches Gladys as one string, `en / fr` only (the user's choice).
+  German informal register: "du", like the Gladys front.
 - Business logic lives in pure, exported functions taking explicit `now`/`dateFormat`
   arguments, and `createRuntime()` takes its I/O as injected dependencies, so tests need
   neither a clock, a network, nor a Gladys instance. Keep `index.js` thin.

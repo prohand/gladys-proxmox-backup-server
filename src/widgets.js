@@ -228,7 +228,7 @@ export function missingDatastoreContent() {
         text: {
           en: 'This datastore was not found on the Proxmox Backup Server. Pick another one in the widget settings.',
           fr: 'Ce datastore est introuvable sur le Proxmox Backup Server. Choisissez-en un autre dans les réglages du widget.',
-          de: 'Dieser Datastore wurde auf dem Proxmox Backup Server nicht gefunden. Wählen Sie in den Widget-Einstellungen einen anderen aus.',
+          de: 'Dieser Datastore wurde auf dem Proxmox Backup Server nicht gefunden. Wähle in den Widget-Einstellungen einen anderen aus.',
           es: 'Este datastore no se encuentra en el Proxmox Backup Server. Elija otro en la configuración del widget.',
         },
       },

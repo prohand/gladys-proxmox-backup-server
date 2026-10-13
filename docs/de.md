@@ -4,7 +4,7 @@ Diese Integration ruft ausschließlich `GET`-Routen der PBS-API auf. Sie kann ke
 
 ## Genaue Leseberechtigungen
 
-Vergeben Sie die integrierte Rolle `DatastoreAudit` (`Datastore.Audit`) auf `/datastore` und die integrierte Rolle `Audit` (`Sys.Audit`) auf `/system`, damit der Aufgabenverlauf gelesen werden kann. Vergeben Sie keine Rolle mit Schreib-, Sicherungs-, Prune-, Verifizierungs- oder Administratorrechten auf den Datastores.
+Vergib die integrierte Rolle `DatastoreAudit` (`Datastore.Audit`) auf `/datastore` und die integrierte Rolle `Audit` (`Sys.Audit`) auf `/system`, damit der Aufgabenverlauf gelesen werden kann. Vergib keine Rolle mit Schreib-, Sicherungs-, Prune-, Verifizierungs- oder Administratorrechten auf den Datastores.
 
 ```bash
 proxmox-backup-manager user create gladys@pbs --password 'A_LONG_UNIQUE_PASSWORD'
@@ -15,23 +15,23 @@ proxmox-backup-manager acl update /system Audit --auth-id gladys@pbs --propagate
 proxmox-backup-manager acl update /system Audit --auth-id 'gladys@pbs!monitoring' --propagate true
 ```
 
-API-Token von PBS haben absichtlich eigene ACL-Einträge; `generate-token` kennt keine Option `--privsep`. Die wirksamen Berechtigungen eines Tokens sind die Schnittmenge aus den Berechtigungen des übergeordneten Benutzers und denen des Tokens selbst, daher die paarweisen ACLs. Ersetzen Sie in beiden Datastore-Befehlen `/datastore` durch `/datastore/NAME`, um die Überwachung auf einen einzigen Datastore zu beschränken. Geben Sie in Gladys die vollständige Token-ID und das nur einmal angezeigte Secret ein.
+API-Token von PBS haben absichtlich eigene ACL-Einträge; `generate-token` kennt keine Option `--privsep`. Die wirksamen Berechtigungen eines Tokens sind die Schnittmenge aus den Berechtigungen des übergeordneten Benutzers und denen des Tokens selbst, daher die paarweisen ACLs. Ersetze in beiden Datastore-Befehlen `/datastore` durch `/datastore/NAME`, um die Überwachung auf einen einzigen Datastore zu beschränken. Gib in Gladys die vollständige Token-ID und das nur einmal angezeigte Secret ein.
 
 ## TLS und das selbstsignierte PBS-Zertifikat
 
-Verwenden Sie eine `https://`-URL. Eine `http://`-URL wird akzeptiert, aber das API-Token wird dann bei jeder Aktualisierung **im Klartext** über das Netzwerk übertragen: Wer diesen Verkehr mitlesen kann, kann es wiederverwenden.
+Verwende eine `https://`-URL. Eine `http://`-URL wird akzeptiert, aber das API-Token wird dann bei jeder Aktualisierung **im Klartext** über das Netzwerk übertragen: Wer diesen Verkehr mitlesen kann, kann es wiederverwenden.
 
 PBS wird mit einem **selbstsignierten** Zertifikat ausgeliefert, dem der Container nicht vertraut. Von der besten zur schlechtesten Option:
 
-1. **Den Fingerabdruck hinterlegen (empfohlen).** Fügen Sie den SHA-256-Fingerabdruck des Servers in das Feld `Fingerabdruck des TLS-Zertifikats` ein. Nur ein Server, der genau dieses Zertifikat vorweist, wird akzeptiert, und der Fingerabdruck wird **vor** dem Senden des Tokens geprüft: Ein Server, der sich als PBS ausgibt, erhält es nie. Den Fingerabdruck finden Sie in der Weboberfläche von PBS (**Dashboard → Show Fingerprint**) oder in einer Shell auf PBS:
+1. **Den Fingerabdruck hinterlegen (empfohlen).** Füge den SHA-256-Fingerabdruck des Servers in das Feld `Fingerabdruck des TLS-Zertifikats` ein. Nur ein Server, der genau dieses Zertifikat vorweist, wird akzeptiert, und der Fingerabdruck wird **vor** dem Senden des Tokens geprüft: Ein Server, der sich als PBS ausgibt, erhält es nie. Den Fingerabdruck findest du in der Weboberfläche von PBS (**Dashboard → Show Fingerprint**) oder in einer Shell auf PBS:
 
    ```bash
    proxmox-backup-manager cert info | grep -i fingerprint
    ```
 
-   Trennzeichen und Groß-/Kleinschreibung spielen keine Rolle (`AA:BB:…` oder `aabb…`). Der Fingerabdruck ändert sich, wenn das Zertifikat erneuert oder ersetzt wird: Aktualisieren Sie dann das Feld. Ein hinterlegter Fingerabdruck erfordert eine `https://`-URL und hat Vorrang vor `TLS-Zertifikat prüfen`.
+   Trennzeichen und Groß-/Kleinschreibung spielen keine Rolle (`AA:BB:…` oder `aabb…`). Der Fingerabdruck ändert sich, wenn das Zertifikat erneuert oder ersetzt wird: Aktualisiere dann das Feld. Ein hinterlegter Fingerabdruck erfordert eine `https://`-URL und hat Vorrang vor `TLS-Zertifikat prüfen`.
 
-2. **Ein von einer vertrauenswürdigen Stelle signiertes Zertifikat** (zum Beispiel ACME / Let's Encrypt, auf PBS eingerichtet): Lassen Sie den Fingerabdruck leer und lassen Sie `TLS-Zertifikat prüfen` aktiviert.
+2. **Ein von einer vertrauenswürdigen Stelle signiertes Zertifikat** (zum Beispiel ACME / Let's Encrypt, auf PBS eingerichtet): Lass den Fingerabdruck leer und lass `TLS-Zertifikat prüfen` aktiviert.
 
 3. **`TLS-Zertifikat prüfen` deaktivieren**, nur als letzter Ausweg und nur in einem vertrauenswürdigen Netzwerk: Die Verbindung bleibt verschlüsselt, aber nichts beweist die Echtheit des Servers, und das Token wird an denjenigen gesendet, der antwortet.
 
@@ -41,7 +41,7 @@ Die allgemeine Auswahlliste `Datumsformat` steuert alle Daten der Aufgaben. Sie 
 
 Das Feld `Zeitzone` legt die Zone fest, in der die Daten angezeigt werden, als IANA-Name wie `Europe/Paris` (Sommer- und Winterzeit werden berücksichtigt). Standardwert ist `UTC`; ein leerer oder unbekannter Wert fällt ebenfalls auf UTC zurück. In ISO 8601 fügt eine andere Zone als UTC ihren Versatz hinzu, zum Beispiel `2026-09-23T23:30:01+02:00`.
 
-> Öffnen Sie nach dem Ändern und Speichern des Datumsformats oder der Zeitzone das betroffene PBS-Gerät in Gladys und speichern Sie es erneut, um die Änderung zu übernehmen.
+> Öffne nach dem Ändern und Speichern des Datumsformats oder der Zeitzone das betroffene PBS-Gerät in Gladys und speichere es erneut, um die Änderung zu übernehmen.
 
 ## Bereitgestellte Funktionen
 
@@ -69,18 +69,18 @@ Diese erfordern Gladys **5.1.0** oder neuer. Sie lesen PBS nur: Keine Schaltflä
 
 ### Dashboard-Widgets
 
-Fügen Sie sie über „Dashboard bearbeiten“ hinzu, in der Widget-Liste dieser Integration.
+Füge sie über **Dashboard → Bearbeiten → Neues Widget** hinzu, unter **Integrations-Widgets**.
 
 | Widget          | Einstellungen                                  | Inhalt                                                                                                                                                                                                              |
 | --------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PBS-Datastore   | Ein Datastore, Kacheln anzeigen (Standard: an) | Belegungsanzeige, freier Speicher, Anzahl der Snapshots, eine Karte pro Verifizierungs-/GC-/Prune-Aufgabe (Datum und Ergebnis-Badge), letzte Sicherung, belegter / gesamter Speicher, Schaltfläche `Aktualisieren`. |
 | PBS-Sicherungen | Keine                                          | Belegung des vollsten Datastores, veraltete Sicherungen, fehlgeschlagene Aufgaben, eine Statuszeile pro Datastore (bis zu 10), Schaltfläche `Aktualisieren`.                                                        |
 
-Die Snapshot-Kachel folgt dem Gerätestatus live. Die anderen Kacheln, die Aufgabenkarten und die Statuszeilen werden nach jeder Aktualisierung aktualisiert. Die Schaltfläche `Aktualisieren` liest PBS sofort erneut. Deaktivieren Sie `Kacheln für Belegung, freien Speicher und Snapshots anzeigen`, um die drei Kacheln auszublenden.
+Die Snapshot-Kachel folgt dem Gerätestatus live. Die anderen Kacheln, die Aufgabenkarten und die Statuszeilen werden nach jeder Aktualisierung aktualisiert. Die Schaltfläche `Aktualisieren` liest PBS sofort erneut. Deaktiviere `Kacheln für Belegung, freien Speicher und Snapshots anzeigen`, um die drei Kacheln auszublenden.
 
 ### Szenen-Auslöser
 
-Sie erscheinen im Szenen-Editor in der Kategorie „Integrationen“. Jeder Filter ist optional: Lassen Sie ihn leer, um jeden Wert zu akzeptieren.
+Sie erscheinen im Szenen-Editor in der Kategorie „Integrationen“. Jeder Filter ist optional: Lass ihn leer, um jeden Wert zu akzeptieren.
 
 | Auslöser                    | Wird ausgelöst, wenn                                                      | Filter                           | Variablen                                                 |
 | --------------------------- | ------------------------------------------------------------------------- | -------------------------------- | --------------------------------------------------------- |
@@ -105,7 +105,7 @@ Sie erscheinen im Szenen-Editor in der Kategorie „Integrationen“. Jeder Filt
 | PBS-Sicherungsbericht abrufen       | `PBS jetzt lesen` (Standard: aus), Sprache des Berichts (en/fr/de/es) | `datastore_count`, `stale_count`, `failed_task_count`, `unreachable_count`, `max_usage_percent`, `all_ok`, `summary`                                                                                                                                |
 
 - Ohne `PBS jetzt lesen` antwortet die Aktion mit den Werten der letzten Aktualisierung und belastet PBS nicht.
-- `summary` ist ein versandfertiger Text mit einer Zeile pro Datastore. Beispiel für einen täglichen Bericht: „Jeden Tag“ um 8:00 → „PBS-Sicherungsbericht abrufen“ → „Nachricht senden“ mit der Ausgabe `summary`.
+- `summary` ist ein versandfertiger Text mit einer Zeile pro Datastore. Beispiel für einen täglichen Bericht: „Zeitabhängiger Auslöser“ (jeden Tag um 8:00) → „PBS-Sicherungsbericht abrufen“ → „Nachricht senden“ mit der Ausgabe `summary`.
 - Beispiel für eine Warnung: „PBS-Wartungsaufgabe beendet“, gefiltert auf das Ergebnis `error` → „Nachricht senden“: `PBS {{triggerEvent.data.task_type}} fehlgeschlagen auf {{triggerEvent.data.datastore_name}}: {{triggerEvent.data.status}}`.
 
 ## Hinweise zum Verhalten
@@ -122,9 +122,9 @@ Sie erscheinen im Szenen-Editor in der Kategorie „Integrationen“. Jeder Filt
 
 ## Prüfen, welche Inventar-Route verwendet wird
 
-Die Integration bevorzugt die günstige Route `groups` und greift auf die vollständige Snapshot-Liste zurück; dieser Rückgriff wird als Warnung in den Container-Logs protokolliert (`Falling back to the snapshot list for datastore ...`, mit dem PBS-Fehler, der ihn ausgelöst hat).
+Die Integration bevorzugt die günstige Route `groups` und greift auf die vollständige Snapshot-Liste zurück; dieser Rückgriff wird als Warnung im Tab **Protokolle** der Integration protokolliert (`Falling back to the snapshot list for datastore ...`, mit dem PBS-Fehler, der ihn ausgelöst hat).
 
-Um das an Ihrem Server zu prüfen, ohne etwas in Gladys zu installieren, führen Sie die schreibgeschützte Diagnose aus einem Klon dieses Repositorys aus:
+Um das an deinem Server zu prüfen, ohne etwas in Gladys zu installieren, führe die schreibgeschützte Diagnose aus einem Klon dieses Repositorys aus:
 
 ```bash
 PBS_URL=https://pbs.example.com:8007 \
@@ -133,7 +133,7 @@ PBS_TOKEN_SECRET='the-token-secret' \
 npm run check:pbs
 ```
 
-Sie gibt pro Datastore die tatsächlich verwendete Route aus, wie lange jede Route dauert, und die letzte Verifizierungs-/GC-/Prune-Aufgabe. Außerdem gleicht sie die Anzahl der Snapshots und die neueste Sicherung mit der vollständigen Snapshot-Liste ab und endet mit dem Code `1`, wenn beide nicht übereinstimmen. Fügen Sie `PBS_NODE=...` für einen anderen Knoten als `localhost` hinzu und `PBS_FINGERPRINT=AA:BB:...` für ein selbstsigniertes Zertifikat (oder `PBS_VERIFY_TLS=false` in einem vertrauenswürdigen Netzwerk).
+Sie gibt pro Datastore die tatsächlich verwendete Route aus, wie lange jede Route dauert, und die letzte Verifizierungs-/GC-/Prune-Aufgabe. Außerdem gleicht sie die Anzahl der Snapshots und die neueste Sicherung mit der vollständigen Snapshot-Liste ab und endet mit dem Code `1`, wenn beide nicht übereinstimmen. Füge `PBS_NODE=...` für einen anderen Knoten als `localhost` hinzu und `PBS_FINGERPRINT=AA:BB:...` für ein selbstsigniertes Zertifikat (oder `PBS_VERIFY_TLS=false` in einem vertrauenswürdigen Netzwerk).
 
 Dieselben Routen lassen sich von Hand prüfen:
 

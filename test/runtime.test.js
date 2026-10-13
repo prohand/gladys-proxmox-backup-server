@@ -763,11 +763,18 @@ test('a device created in Gladys is read at once, even inside the refresh interv
   assert.equal(gladys.calls.states.length, 2);
 });
 
-test('test_connection reports a PBS error in both languages', async () => {
+test('test_connection reports a PBS error in English and French only', async () => {
   const gladys = fakeGladys(CONFIG);
   const runtime = createRuntime(gladys, {
     listDatastores: () =>
-      Promise.reject(new ProxmoxError('auth', { en: 'token refused', fr: 'jeton refusé' })),
+      Promise.reject(
+        new ProxmoxError('auth', {
+          en: 'token refused',
+          fr: 'jeton refusé',
+          de: 'Token abgelehnt',
+          es: 'token rechazado',
+        }),
+      ),
   });
   await assert.rejects(runtime.testConnection(), { message: 'token refused / jeton refusé' });
 });
