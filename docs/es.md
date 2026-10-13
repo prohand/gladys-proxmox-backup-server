@@ -1,0 +1,145 @@
+# Proxmox Backup Server — configuración
+
+Esta integración solo llama a rutas `GET` de la API de PBS. No puede iniciar, modificar, depurar (prune) ni eliminar copias de seguridad ni trabajos.
+
+## Permisos exactos de solo lectura
+
+Conceda el rol integrado `DatastoreAudit` (`Datastore.Audit`) sobre `/datastore`, y el rol integrado `Audit` (`Sys.Audit`) sobre `/system` para que se pueda leer el historial de tareas. No conceda ningún rol de escritura, copia de seguridad, prune, verificación o administración sobre los datastores.
+
+```bash
+proxmox-backup-manager user create gladys@pbs --password 'A_LONG_UNIQUE_PASSWORD'
+proxmox-backup-manager user generate-token gladys@pbs monitoring
+proxmox-backup-manager acl update /datastore DatastoreAudit --auth-id gladys@pbs --propagate true
+proxmox-backup-manager acl update /datastore DatastoreAudit --auth-id 'gladys@pbs!monitoring' --propagate true
+proxmox-backup-manager acl update /system Audit --auth-id gladys@pbs --propagate true
+proxmox-backup-manager acl update /system Audit --auth-id 'gladys@pbs!monitoring' --propagate true
+```
+
+Los tokens de API de PBS tienen, por diseño, sus propias entradas de ACL; `generate-token` no acepta la opción `--privsep`. Los permisos efectivos de un token son la intersección de los permisos del usuario al que pertenece y los del propio token, de ahí las ACL emparejadas. Sustituya `/datastore` por `/datastore/NAME` en los dos comandos de datastore para limitar la supervisión a un solo datastore. Introduzca en Gladys el ID completo del token y el secreto, que solo se muestra una vez.
+
+## TLS y el certificado autofirmado de PBS
+
+Use una URL `https://`. Se acepta una URL `http://`, pero entonces el token de API viaja **sin cifrar** por la red en cada actualización: cualquiera que pueda leer ese tráfico puede reutilizarlo.
+
+PBS se entrega con un certificado **autofirmado**, en el que el contenedor no confía. De la mejor opción a la peor:
+
+1. **Fijar la huella (recomendado).** Pegue la huella SHA-256 del servidor en el campo `Huella del certificado TLS`. Solo se acepta un servidor que presente exactamente ese certificado, y la huella se comprueba **antes** de enviar el token: un servidor que se haga pasar por PBS nunca lo recibe. La huella aparece en la interfaz web de PBS (**Dashboard → Show Fingerprint**) o en un shell en PBS:
+
+   ```bash
+   proxmox-backup-manager cert info | grep -i fingerprint
+   ```
+
+   Los separadores y las mayúsculas no importan (`AA:BB:…` o `aabb…`). La huella cambia cuando el certificado se renueva o se sustituye: actualice entonces el campo. Una huella fijada requiere una URL `https://` y tiene prioridad sobre `Verificar el certificado TLS`.
+
+2. **Un certificado firmado por una autoridad de confianza** (por ejemplo ACME / Let's Encrypt configurado en PBS): deje la huella vacía y mantenga activado `Verificar el certificado TLS`.
+
+3. **Desactivar `Verificar el certificado TLS`**, como último recurso y solo en una red de confianza: la conexión sigue cifrada, pero nada garantiza que el servidor sea el auténtico, y el token se envía a quien responda.
+
+El intervalo de actualización es de 15 minutos por defecto. No puede bajar de 5 minutos, para limitar el crecimiento de la base de datos de Gladys, y puede aumentarse hasta 24 horas.
+
+La lista desplegable general `Formato de fecha` controla todas las fechas de las tareas. Ofrece los formatos ISO 8601, día/mes/año, año-mes-día y mes/día/año.
+
+El campo `Zona horaria` define la zona en la que se muestran las fechas, como nombre IANA, por ejemplo `Europe/Paris` (se tienen en cuenta el horario de verano y el de invierno). Su valor por defecto es `UTC`; un valor vacío o desconocido también vuelve a UTC. En ISO 8601, una zona distinta de UTC añade su desfase, por ejemplo `2026-09-23T23:30:01+02:00`.
+
+> Tras cambiar y guardar el formato de fecha o la zona horaria, abra el dispositivo PBS afectado en Gladys y guárdelo de nuevo para aplicar el cambio.
+
+## Funciones expuestas
+
+Cada datastore de PBS se expone como un dispositivo de Gladys con estas funciones de solo lectura:
+
+Los tres valores de capacidad (`Usage`, `Total size` y `Used space`) se asignan a la función `data/size` de Gladys, conservando su unidad en porcentaje o en gigabytes.
+
+| Función                        | Valor      | Descripción                                                                                  |
+| ------------------------------ | ---------- | -------------------------------------------------------------------------------------------- |
+| Usage                          | Porcentaje | Capacidad usada del datastore, redondeada a dos decimales.                                   |
+| Total size                     | Gigabytes  | Capacidad total del datastore, redondeada a dos decimales.                                   |
+| Used space                     | Gigabytes  | Capacidad usada del datastore, redondeada a dos decimales.                                   |
+| Snapshot count                 | Entero     | Número de snapshots almacenados actualmente, sumado sobre los grupos de copias de seguridad. |
+| Last verify status             | Texto      | Estado de la última verificación, por ejemplo `OK`.                                          |
+| Last verify date               | Texto      | Fecha de la última verificación, en el formato configurado.                                  |
+| Last garbage collection status | Texto      | Estado de la última garbage collection, por ejemplo `OK`.                                    |
+| Last garbage collection date   | Texto      | Fecha de la última garbage collection, en el formato configurado.                            |
+| Last prune status              | Texto      | Estado del último prune, por ejemplo `OK`.                                                   |
+| Last prune date                | Texto      | Fecha del último prune, en el formato configurado.                                           |
+| Backup stale (> 26 h)          | `0` o `1`  | `1` cuando no existe ningún snapshot o el más reciente tiene más de 26 horas.                |
+
+## Widgets del panel, activadores y acciones de escena (Gladys 5.1)
+
+Requieren Gladys **5.1.0** o posterior. Solo leen PBS: ningún botón, activador ni acción puede iniciar, cambiar o eliminar nada en el servidor.
+
+### Widgets del panel
+
+Añádalos desde «Editar panel», en la lista de widgets de esta integración.
+
+| Widget                  | Configuración                                          | Contenido                                                                                                                                                                                                     |
+| ----------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Datastore PBS           | Un datastore, mostrar mosaicos (por defecto: activado) | Indicador de uso, espacio libre, número de snapshots, una tarjeta por tarea de verificación/GC/prune (fecha y distintivo de resultado), última copia de seguridad, espacio usado / total, botón `Actualizar`. |
+| Copias de seguridad PBS | Ninguna                                                | Uso del datastore más lleno, copias de seguridad demasiado antiguas, tareas fallidas, una fila de estado por datastore (hasta 10), botón `Actualizar`.                                                        |
+
+El mosaico de snapshots sigue el estado del dispositivo en directo. Los demás mosaicos, las tarjetas de tareas y las filas de estado se actualizan tras cada actualización. El botón `Actualizar` vuelve a leer PBS de inmediato. Desactive `Mostrar los mosaicos de uso, espacio libre y snapshots` para ocultar los tres mosaicos.
+
+### Activadores de escena
+
+Aparecen en el editor de escenas, en la categoría «Integraciones». Cada filtro es opcional: déjelo vacío para aceptar cualquier valor.
+
+| Activador                                | Se activa cuando                                                    | Filtros                             | Variables                                                 |
+| ---------------------------------------- | ------------------------------------------------------------------- | ----------------------------------- | --------------------------------------------------------- |
+| Tarea de mantenimiento PBS finalizada    | Ha terminado una tarea de verificación, garbage collection o prune. | Datastore, tipo de tarea, resultado | `datastore_name`, `task_type`, `result`, `status`, `date` |
+| Nueva copia de seguridad PBS             | Ha aparecido un snapshot más reciente en el datastore.              | Datastore                           | `datastore_name`, `last_backup`, `snapshot_count`         |
+| Copia de seguridad PBS demasiado antigua | El snapshot más reciente acaba de superar las 26 horas.             | Datastore                           | `datastore_name`, `last_backup`, `hours_since_backup`     |
+| PBS inaccesible                          | Ha fallado la lectura de un datastore (una vez por caída).          | Datastore                           | `datastore_name`, `error`                                 |
+| PBS accesible de nuevo                   | La lectura de un datastore ha funcionado tras un fallo.             | Datastore                           | `datastore_name`                                          |
+
+`result` es `ok`, `warning` o `error`; `status` es el estado de PBS tal cual, por ejemplo `OK`, `WARNINGS: 2` o el texto del error.
+
+- Los activadores se disparan **una vez por cambio**, nunca en cada actualización. Ejemplo: una copia de seguridad que sigue siendo demasiado antigua dispara `Copia de seguridad PBS demasiado antigua` una sola vez.
+- Los cambios los detecta la actualización programada (el intervalo de actualización). Una actualización solicitada por un widget o una acción de escena nunca dispara un activador por sí misma; la siguiente actualización programada informa del cambio.
+- La primera actualización tras un arranque o un cambio de configuración no dispara nada: establece el punto de referencia.
+- Si varias tareas del mismo tipo terminan entre dos actualizaciones, solo se informa de la más reciente.
+
+### Acciones de escena
+
+| Acción                                        | Campos                                                                        | Salidas                                                                                                                                                                                                                                             |
+| --------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Obtener el estado de un datastore PBS         | Datastore (obligatorio), `Leer PBS ahora` (por defecto: desactivado)          | `datastore_name`, `usage_percent`, `used_gb`, `total_gb`, `snapshot_count`, `backup_stale`, `last_backup`, `hours_since_backup`, `last_verify_status`, `last_verify_date`, `last_gc_status`, `last_gc_date`, `last_prune_status`, `last_prune_date` |
+| Obtener el informe de copias de seguridad PBS | `Leer PBS ahora` (por defecto: desactivado), idioma del informe (en/fr/de/es) | `datastore_count`, `stale_count`, `failed_task_count`, `unreachable_count`, `max_usage_percent`, `all_ok`, `summary`                                                                                                                                |
+
+- Sin `Leer PBS ahora`, la acción responde con los valores de la última actualización y no supone ninguna carga para PBS.
+- `summary` es un texto listo para enviar, con una línea por datastore. Ejemplo de informe diario: «Cada día» a las 8:00 → «Obtener el informe de copias de seguridad PBS» → «Enviar mensaje» con la salida `summary`.
+- Ejemplo de alerta: «Tarea de mantenimiento PBS finalizada» filtrada por el resultado `error` → «Enviar mensaje»: `PBS {{triggerEvent.data.task_type}} ha fallado en {{triggerEvent.data.datastore_name}}: {{triggerEvent.data.status}}`.
+
+## Notas sobre el funcionamiento
+
+- El número de snapshots y la antigüedad de las copias de seguridad se leen de los grupos de copias de seguridad del datastore (`backup-count` y `last-backup`), de modo que un datastore con miles de snapshots solo cuesta una respuesta pequeña por actualización. Si una versión de PBS no expone esos contadores, la integración recurre a la lista de snapshots.
+- El historial de tareas se lee con una petición filtrada por tipo de tarea (verificación, garbage collection, prune), de modo que un datastore con mucha actividad no las saca de la vista para devolverlas a `Never run`, y un tipo de tarea que nunca se ha ejecutado solo cuesta una respuesta vacía. Una versión de PBS que rechace el filtro se lee en su lugar página a página (hasta 2000 tareas).
+- La capacidad de todos los datastores procede de una sola lectura de `/status/datastore-usage`, compartida por todos los datastores actualizados en el mismo minuto.
+- Los datastores sin conexión o no montados no informan de su capacidad; la integración no publica entonces **nada** para el uso, el tamaño total y el espacio usado (los últimos valores reales siguen mostrándose) en lugar de un `0` que parecería un datastore vaciado. Los widgets muestran la capacidad como no disponible.
+- Toda petición a PBS termina en 15 segundos, incluida una respuesta cortada o bloqueada a medias, y se rechazan las respuestas de más de 8 MB. El estado de la conexión indica la causa: token rechazado (HTTP 401), rol ausente (HTTP 403), certificado, red o tiempo de espera agotado.
+- Una actualización que falla (error de red, tiempo de espera agotado, reinicio de PBS) se reintenta en el siguiente ciclo de un minuto de Gladys en lugar de esperar un intervalo de actualización completo. Al arrancar, la conexión se reintenta cuatro veces con una espera exponencial antes de que la integración se declare desconectada.
+- Una actualización a la que PBS respondió pero que Gladys no pudo guardar (por ejemplo, mientras Gladys se reinicia) también se reintenta en el siguiente ciclo; no se notifica como `PBS inaccesible`.
+- Un datastore eliminado o renombrado en PBS se retira de la lista supervisada en cuanto PBS deja de listarlo, sin evento `PBS inaccesible`, y deja de mantener en rojo el estado de la conexión. Su dispositivo, que permanece en Gladys, se vuelve a buscar tras un intervalo de actualización y después cada vez con el doble de espera, hasta una vez al día.
+- Un dispositivo recién añadido desde la pestaña «Descubrir» se lee de inmediato en lugar de en la siguiente actualización.
+
+## Comprobar qué ruta de inventario se usa
+
+La integración prefiere la ruta económica `groups` y recurre a la lista completa de snapshots; ese recurso se registra como advertencia en los registros del contenedor (`Falling back to the snapshot list for datastore ...`, con el error de PBS que lo provocó).
+
+Para comprobarlo con su servidor sin instalar nada en Gladys, ejecute el diagnóstico de solo lectura desde un clon de este repositorio:
+
+```bash
+PBS_URL=https://pbs.example.com:8007 \
+PBS_TOKEN_ID='gladys@pbs!monitoring' \
+PBS_TOKEN_SECRET='the-token-secret' \
+npm run check:pbs
+```
+
+Muestra, por datastore, la ruta realmente usada, cuánto tarda cada ruta y la última tarea de verificación/GC/prune. También contrasta el número de snapshots y la copia de seguridad más reciente con la lista completa de snapshots, y termina con el código `1` si no coinciden. Añada `PBS_NODE=...` para un nodo distinto de `localhost`, y `PBS_FINGERPRINT=AA:BB:...` para un certificado autofirmado (o `PBS_VERIFY_TLS=false` en una red de confianza).
+
+Las mismas rutas pueden comprobarse a mano:
+
+```bash
+curl -sSf -H "Authorization: PBSAPIToken=gladys@pbs!monitoring:SECRET" \
+  'https://pbs.example.com:8007/api2/json/admin/datastore/NAME/groups' | head -c 400
+```
+
+Un HTTP 403 significa que a la ACL le falta `Datastore.Audit` sobre ese datastore; un HTTP 404 significa que esta versión de PBS no ofrece la ruta y que el recurso a la lista de snapshots es lo esperado.

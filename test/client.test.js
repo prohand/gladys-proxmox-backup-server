@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import https from 'node:https';
 import { after, test } from 'node:test';
+import { LANGUAGES } from '../src/i18n.js';
 import { ProxmoxClient, ProxmoxError } from '../src/proxmox.js';
 import { TEST_CERT, TEST_FINGERPRINT, TEST_KEY } from './fixtures/tls.js';
 
@@ -75,6 +76,7 @@ test('a connection cut in the middle of the answer rejects instead of hanging', 
     assert.ok(error instanceof ProxmoxError);
     assert.equal(error.kind, 'network');
     assert.match(error.messages.fr, /interrompue/);
+    assert.deepEqual(Object.keys(error.messages), LANGUAGES);
     return true;
   });
 });
@@ -105,6 +107,7 @@ test('401 and 403 are told apart, with a bilingual message naming the fix', asyn
     assert.equal(error.status, 401);
     assert.match(error.messages.en, /token/);
     assert.match(error.messages.fr, /jeton/);
+    assert.deepEqual(Object.keys(error.messages), LANGUAGES);
     return true;
   });
   await assert.rejects(client(url).getGroups('one'), (error) => {
@@ -169,6 +172,7 @@ test('a certificate that is not the pinned one never receives the token', async 
       assert.equal(error.kind, 'tls');
       assert.match(error.messages.en, /pinned fingerprint/);
       assert.match(error.messages.fr, /empreinte épinglée/);
+      assert.deepEqual(Object.keys(error.messages), LANGUAGES);
       return true;
     },
   );
@@ -190,7 +194,8 @@ test('a pinned fingerprint refuses http:// and a value that is not SHA-256', asy
 test('an incomplete configuration is reported without any request', async () => {
   await assert.rejects(new ProxmoxClient({ base_url: '' }).getDatastores(), (error) => {
     assert.equal(error.kind, 'config');
-    assert.ok(error.messages.en && error.messages.fr);
+    assert.deepEqual(Object.keys(error.messages), LANGUAGES);
+    for (const language of LANGUAGES) assert.ok(error.messages[language], language);
     return true;
   });
 });

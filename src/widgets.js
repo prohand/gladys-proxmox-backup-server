@@ -1,4 +1,5 @@
 import { WIDGET_COLORS } from '@gladysassistant/integration-sdk';
+import { eachLanguage } from './i18n.js';
 
 // Dashboard widgets declared in the manifest (Gladys 5.1). The integration only
 // describes the content; Gladys renders it. The snapshot tile is bound to its
@@ -27,23 +28,43 @@ const USAGE_WARNING_PERCENT = 80;
 const USAGE_DANGER_PERCENT = 90;
 
 const TASK_NAMES = {
-  verify: { en: 'Verify', fr: 'Vérification' },
-  gc: { en: 'Garbage collection', fr: 'Garbage collection' },
-  prune: { en: 'Prune', fr: 'Prune' },
+  verify: { en: 'Verify', fr: 'Vérification', de: 'Verifizierung', es: 'Verificación' },
+  gc: {
+    en: 'Garbage collection',
+    fr: 'Garbage collection',
+    de: 'Garbage Collection',
+    es: 'Garbage collection',
+  },
+  prune: { en: 'Prune', fr: 'Prune', de: 'Prune', es: 'Prune' },
 };
 
 // Badge texts: 16 characters at most.
 const RESULTS = {
-  ok: { en: 'Succeeded', fr: 'Réussie', color: WIDGET_COLORS.SUCCESS },
-  warning: { en: 'Warnings', fr: 'Avertissements', color: WIDGET_COLORS.WARNING },
-  error: { en: 'Failed', fr: 'Échouée', color: WIDGET_COLORS.DANGER },
-  running: { en: 'Running', fr: 'En cours', color: WIDGET_COLORS.INFO },
-  never: { en: 'Never run', fr: 'Jamais lancée', color: WIDGET_COLORS.NEUTRAL },
+  ok: {
+    text: { en: 'Succeeded', fr: 'Réussie', de: 'Erfolgreich', es: 'Correcta' },
+    color: WIDGET_COLORS.SUCCESS,
+  },
+  warning: {
+    text: { en: 'Warnings', fr: 'Avertissements', de: 'Warnungen', es: 'Advertencias' },
+    color: WIDGET_COLORS.WARNING,
+  },
+  error: {
+    text: { en: 'Failed', fr: 'Échouée', de: 'Fehlgeschlagen', es: 'Fallida' },
+    color: WIDGET_COLORS.DANGER,
+  },
+  running: {
+    text: { en: 'Running', fr: 'En cours', de: 'Läuft', es: 'En curso' },
+    color: WIDGET_COLORS.INFO,
+  },
+  never: {
+    text: { en: 'Never run', fr: 'Jamais lancée', de: 'Nie ausgeführt', es: 'Nunca ejecutada' },
+    color: WIDGET_COLORS.NEUTRAL,
+  },
 };
 
 const REFRESH_BUTTON = {
   type: 'button',
-  label: { en: 'Refresh', fr: 'Actualiser' },
+  label: { en: 'Refresh', fr: 'Actualiser', de: 'Aktualisieren', es: 'Actualizar' },
   icon: 'refresh-cw',
   style: 'secondary',
   action: { key: WIDGET_ACTIONS.REFRESH },
@@ -55,42 +76,53 @@ export function usageColor(percent) {
   return WIDGET_COLORS.SUCCESS;
 }
 
-// A number with at most `digits` decimals, trailing zeros dropped, in both
-// decimal separators.
+// A number with at most `digits` decimals, trailing zeros dropped, with the
+// decimal separator of each language (a point in English, a comma otherwise).
 function decimal(number, digits) {
   const value = String(Number(number.toFixed(digits)));
-  return { en: value, fr: value.replace('.', ',') };
+  return eachLanguage((language) => (language === 'en' ? value : value.replace('.', ',')));
 }
+
+const TERABYTES = { en: 'TB', fr: 'To', de: 'TB', es: 'TB' };
+const GIGABYTES = { en: 'GB', fr: 'Go', de: 'GB', es: 'GB' };
 
 // A size in GB split for a tile: `883` `Go` below 1 TB, `2,88` `To` above.
 function sizeParts(gb) {
-  if (gb >= 1000) return { value: decimal(gb / 1000, 2), unit: { en: 'TB', fr: 'To' } };
-  return { value: decimal(gb, gb < 10 ? 1 : 0), unit: { en: 'GB', fr: 'Go' } };
+  if (gb >= 1000) return { value: decimal(gb / 1000, 2), unit: TERABYTES };
+  return { value: decimal(gb, gb < 10 ? 1 : 0), unit: GIGABYTES };
 }
 
 /** A size in GB as short localized text: `883 Go` below 1 TB, `2,88 To` above. */
 export function formatSize(gb) {
   const { value, unit } = sizeParts(gb);
-  return { en: `${value.en} ${unit.en}`, fr: `${value.fr} ${unit.fr}` };
+  return eachLanguage((language) => `${value[language]} ${unit[language]}`);
 }
 
 // Capacity is null while a datastore is offline or unmounted: it is shown as
 // unknown rather than as an empty datastore.
 const hasCapacity = (summary) => Number.isFinite(summary.usagePercent);
-const UNKNOWN_VALUE = { en: '—', fr: '—' };
+const UNKNOWN_VALUE = { en: '—', fr: '—', de: '—', es: '—' };
+const USED_SPACE = {
+  en: 'Used space',
+  fr: 'Espace utilisé',
+  de: 'Belegter Speicher',
+  es: 'Espacio usado',
+};
+const USAGE = { en: 'Usage', fr: 'Utilisation', de: 'Belegung', es: 'Uso' };
+const FREE = { en: 'Free', fr: 'Libre', de: 'Frei', es: 'Libre' };
 
 function spaceItem(summary) {
   if (!hasCapacity(summary))
     return {
-      label: { en: 'Used space', fr: 'Espace utilisé' },
-      value: { en: 'Unavailable', fr: 'Indisponible' },
+      label: USED_SPACE,
+      value: { en: 'Unavailable', fr: 'Indisponible', de: 'Nicht verfügbar', es: 'No disponible' },
       color: WIDGET_COLORS.NEUTRAL,
     };
   const used = formatSize(summary.usedGb);
   const total = formatSize(summary.totalGb);
   return {
-    label: { en: 'Used space', fr: 'Espace utilisé' },
-    value: { en: `${used.en} / ${total.en}`, fr: `${used.fr} / ${total.fr}` },
+    label: USED_SPACE,
+    value: eachLanguage((language) => `${used[language]} / ${total[language]}`),
     color: usageColor(summary.usagePercent),
   };
 }
@@ -102,16 +134,26 @@ function taskCard(type, task) {
   return {
     title: TASK_NAMES[type],
     ...(task.epoch ? { date: new Date(task.epoch * 1000).toISOString() } : {}),
-    badge: { text: { en: result.en, fr: result.fr }, color: result.color },
+    badge: { text: result.text, color: result.color },
   };
 }
 
 function backupItem(summary) {
   return {
-    label: { en: 'Last backup', fr: 'Dernière sauvegarde' },
+    label: {
+      en: 'Last backup',
+      fr: 'Dernière sauvegarde',
+      de: 'Letzte Sicherung',
+      es: 'Última copia de seguridad',
+    },
     value: summary.newestBackupEpoch
       ? summary.lastBackup
-      : { en: 'No backup', fr: 'Aucune sauvegarde' },
+      : {
+          en: 'No backup',
+          fr: 'Aucune sauvegarde',
+          de: 'Keine Sicherung',
+          es: 'Sin copia de seguridad',
+        },
     icon: 'archive',
     color: summary.stale ? WIDGET_COLORS.DANGER : WIDGET_COLORS.SUCCESS,
   };
@@ -127,7 +169,7 @@ export function datastoreWidgetContent(gladys, summary, { showTiles = true } = {
     ? [
         {
           type: 'gauge',
-          label: { en: 'Usage', fr: 'Utilisation' },
+          label: USAGE,
           value: Math.round(summary.usagePercent),
           min: 0,
           max: 100,
@@ -136,16 +178,16 @@ export function datastoreWidgetContent(gladys, summary, { showTiles = true } = {
         },
         {
           type: 'value',
-          label: { en: 'Free', fr: 'Libre' },
+          label: FREE,
           ...sizeParts(Math.max(0, summary.totalGb - summary.usedGb)),
           icon: 'hard-drive',
         },
       ]
     : [
-        { type: 'value', label: { en: 'Usage', fr: 'Utilisation' }, value: UNKNOWN_VALUE },
+        { type: 'value', label: USAGE, value: UNKNOWN_VALUE },
         {
           type: 'value',
-          label: { en: 'Free', fr: 'Libre' },
+          label: FREE,
           value: UNKNOWN_VALUE,
           icon: 'hard-drive',
         },
@@ -154,7 +196,7 @@ export function datastoreWidgetContent(gladys, summary, { showTiles = true } = {
     ...capacityTiles,
     {
       type: 'value',
-      label: { en: 'Snapshots', fr: 'Snapshots' },
+      label: { en: 'Snapshots', fr: 'Snapshots', de: 'Snapshots', es: 'Snapshots' },
       device_feature: ids.feature('snapshots'),
       icon: 'layers',
     },
@@ -186,6 +228,8 @@ export function missingDatastoreContent() {
         text: {
           en: 'This datastore was not found on the Proxmox Backup Server. Pick another one in the widget settings.',
           fr: 'Ce datastore est introuvable sur le Proxmox Backup Server. Choisissez-en un autre dans les réglages du widget.',
+          de: 'Dieser Datastore wurde auf dem Proxmox Backup Server nicht gefunden. Wählen Sie in den Widget-Einstellungen einen anderen aus.',
+          es: 'Este datastore no se encuentra en el Proxmox Backup Server. Elija otro en la configuración del widget.',
         },
       },
     ],
@@ -194,13 +238,23 @@ export function missingDatastoreContent() {
 
 function overviewItem(summary) {
   const failed = Object.values(summary.tasks).some((task) => task.result === 'error');
-  let value = { en: 'OK', fr: 'OK' };
+  let value = { en: 'OK', fr: 'OK', de: 'OK', es: 'OK' };
   let color = WIDGET_COLORS.SUCCESS;
   if (summary.stale) {
-    value = { en: 'Backup stale', fr: 'Sauvegarde ancienne' };
+    value = {
+      en: 'Backup stale',
+      fr: 'Sauvegarde ancienne',
+      de: 'Sicherung zu alt',
+      es: 'Copia antigua',
+    };
     color = WIDGET_COLORS.DANGER;
   } else if (failed) {
-    value = { en: 'Task failed', fr: 'Tâche en échec' };
+    value = {
+      en: 'Task failed',
+      fr: 'Tâche en échec',
+      de: 'Aufgabe fehlgeschlagen',
+      es: 'Tarea fallida',
+    };
     color = WIDGET_COLORS.DANGER;
   } else if (summary.usagePercent >= USAGE_WARNING_PERCENT) {
     color = usageColor(summary.usagePercent);
@@ -209,7 +263,7 @@ function overviewItem(summary) {
   const usage = `${Math.round(summary.usagePercent)} %`;
   return {
     label: summary.store,
-    value: { en: `${value.en} · ${usage}`, fr: `${value.fr} · ${usage}` },
+    value: eachLanguage((language) => `${value[language]} · ${usage}`),
     color,
   };
 }
@@ -232,7 +286,12 @@ export function overviewWidgetContent(summaries, failures = new Map()) {
     ...summaries.map(overviewItem),
     ...[...failures.keys()].map((store) => ({
       label: store,
-      value: { en: 'PBS unreachable', fr: 'PBS injoignable' },
+      value: {
+        en: 'PBS unreachable',
+        fr: 'PBS injoignable',
+        de: 'PBS nicht erreichbar',
+        es: 'PBS inaccesible',
+      },
       color: WIDGET_COLORS.DANGER,
     })),
   ];
@@ -242,7 +301,7 @@ export function overviewWidgetContent(summaries, failures = new Map()) {
       // The status rows already list every datastore: no count tile.
       {
         type: 'gauge',
-        label: { en: 'Max usage', fr: 'Utilisation max' },
+        label: { en: 'Max usage', fr: 'Utilisation max', de: 'Max. Belegung', es: 'Uso máximo' },
         value: maxUsage,
         min: 0,
         max: 100,
@@ -251,14 +310,24 @@ export function overviewWidgetContent(summaries, failures = new Map()) {
       },
       {
         type: 'value',
-        label: { en: 'Stale backups', fr: 'Sauv. en retard' },
+        label: {
+          en: 'Stale backups',
+          fr: 'Sauv. en retard',
+          de: 'Veraltete Sicherungen',
+          es: 'Copias antiguas',
+        },
         value: staleCount,
         icon: 'clock',
         color: staleCount ? WIDGET_COLORS.DANGER : WIDGET_COLORS.SUCCESS,
       },
       {
         type: 'value',
-        label: { en: 'Failed tasks', fr: 'Tâches en échec' },
+        label: {
+          en: 'Failed tasks',
+          fr: 'Tâches en échec',
+          de: 'Fehlgeschlagene Aufgaben',
+          es: 'Tareas fallidas',
+        },
         value: failedTaskCount,
         icon: 'alert-triangle',
         color: failedTaskCount ? WIDGET_COLORS.DANGER : WIDGET_COLORS.SUCCESS,

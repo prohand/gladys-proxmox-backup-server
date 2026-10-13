@@ -1,6 +1,7 @@
 import { logger } from '@gladysassistant/integration-sdk';
 import { withPullDeadline } from './widgetDeadline.js';
 import { normalizeConfig } from './config.js';
+import { eachLanguage, LANGUAGES, pickLanguage } from './i18n.js';
 import {
   buildDatastoreDevice,
   DatastoreMissingError,
@@ -149,13 +150,13 @@ export function createRuntime(gladys, dependencies = {}) {
     return datastoreByExternalId.get(externalId);
   }
 
-  // The user-facing reason of a failure, in both languages.
+  // The user-facing reason of a failure, in every language: an error that
+  // carries no translation (or not this one) falls back to its English text.
   function reasonOf(error) {
-    const messages = error?.messages ?? { en: error?.message, fr: error?.message };
-    return {
-      en: String(messages.en ?? '').slice(0, 150),
-      fr: String(messages.fr ?? '').slice(0, 150),
-    };
+    const messages = error?.messages ?? {};
+    return eachLanguage((language) =>
+      String(messages[language] ?? messages.en ?? error?.message ?? '').slice(0, 150),
+    );
   }
 
   async function syncStatus() {
@@ -172,6 +173,8 @@ export function createRuntime(gladys, dependencies = {}) {
           : {
               en: `Proxmox Backup Server unreachable: ${reason.en}`,
               fr: `Proxmox Backup Server injoignable : ${reason.fr}`,
+              de: `Proxmox Backup Server nicht erreichbar: ${reason.de}`,
+              es: `Proxmox Backup Server inaccesible: ${reason.es}`,
             },
       )
       .catch((statusError) => logger.warn(`Status not reported: ${statusError.message}`));
@@ -349,7 +352,12 @@ export function createRuntime(gladys, dependencies = {}) {
     const store = settings.datastore && (await resolveStore(settings.datastore));
     if (!store) throw new Error('This datastore was not found on the Proxmox Backup Server');
     await refresh(settings.datastore, store);
-    return { en: 'Datastore refreshed', fr: 'Datastore actualisé' };
+    return {
+      en: 'Datastore refreshed',
+      fr: 'Datastore actualisé',
+      de: 'Datastore aktualisiert',
+      es: 'Datastore actualizado',
+    };
   }
 
   async function refreshOverviewWidget() {
@@ -358,8 +366,15 @@ export function createRuntime(gladys, dependencies = {}) {
       return {
         en: `Refreshed, ${failures.size} datastore(s) unreachable`,
         fr: `Actualisé, ${failures.size} datastore(s) injoignable(s)`,
+        de: `Aktualisiert, ${failures.size} Datastore(s) nicht erreichbar`,
+        es: `Actualizado, ${failures.size} datastore(s) inaccesible(s)`,
       };
-    return { en: 'Datastores refreshed', fr: 'Datastores actualisés' };
+    return {
+      en: 'Datastores refreshed',
+      fr: 'Datastores actualisés',
+      de: 'Datastores aktualisiert',
+      es: 'Datastores actualizados',
+    };
   }
 
   // Scene fields arrive validated, but a boolean may still come as text.
@@ -375,7 +390,7 @@ export function createRuntime(gladys, dependencies = {}) {
 
   async function getBackupReport(fields = {}) {
     const { summaries, failures } = await readAll(isOn(fields.refresh));
-    return backupReportOutputs(summaries, failures, fields.language === 'fr' ? 'fr' : 'en');
+    return backupReportOutputs(summaries, failures, pickLanguage(fields.language));
   }
 
   async function testConnection() {
@@ -383,14 +398,17 @@ export function createRuntime(gladys, dependencies = {}) {
     try {
       count = await discover();
     } catch (error) {
-      // A thrown action reaches the Configuration screen as plain text: both
-      // languages travel in one string.
-      const { en, fr } = error?.messages ?? { en: error?.message, fr: error?.message };
-      throw new Error(en === fr ? en : `${en} / ${fr}`, { cause: error });
+      // A thrown action reaches the Configuration screen as plain text: every
+      // language travels in one string, each distinct text once.
+      const messages = error?.messages ?? { en: error?.message };
+      const texts = [...new Set(LANGUAGES.map((language) => messages[language]).filter(Boolean))];
+      throw new Error(texts.length ? texts.join(' / ') : String(error?.message), { cause: error });
     }
     return {
       en: `Connection successful: ${count} datastore(s) found.`,
       fr: `Connexion réussie : ${count} datastore(s) trouvé(s).`,
+      de: `Verbindung erfolgreich: ${count} Datastore(s) gefunden.`,
+      es: `Conexión correcta: ${count} datastore(s) encontrado(s).`,
     };
   }
 
@@ -428,6 +446,8 @@ export function createRuntime(gladys, dependencies = {}) {
       .setConnectionStatus(false, {
         en: 'Cannot connect to Proxmox Backup Server. Check configuration and logs.',
         fr: 'Connexion à Proxmox Backup Server impossible. Vérifiez la configuration et les logs.',
+        de: 'Keine Verbindung zu Proxmox Backup Server möglich. Prüfen Sie die Konfiguration und die Logs.',
+        es: 'No se puede conectar con Proxmox Backup Server. Compruebe la configuración y los registros.',
       })
       .catch(() => {});
     reportedConnected = false;

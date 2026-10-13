@@ -176,7 +176,7 @@ test('start retries with a backoff before reporting a failed connection', async 
   assert.deepEqual(gladys.calls.connectionStatus, [{ connected: true, message: undefined }]);
 });
 
-test('start gives up after the last attempt and reports a bilingual message', async () => {
+test('start gives up after the last attempt and reports a message in every language', async () => {
   const gladys = fakeGladys(CONFIG);
   const runtime = createRuntime(gladys, {
     listDatastores: () => Promise.reject(new Error('ECONNREFUSED')),
@@ -187,10 +187,10 @@ test('start gives up after the last attempt and reports a bilingual message', as
   assert.equal(await runtime.start(), false);
   const [{ connected, message }] = gladys.calls.connectionStatus;
   assert.equal(connected, false);
-  assert.deepEqual(Object.keys(message), ['en', 'fr']);
+  assert.deepEqual(Object.keys(message), ['en', 'fr', 'de', 'es']);
 });
 
-test('the test_connection action reports the datastore count in both languages', async () => {
+test('the test_connection action reports the datastore count in every language', async () => {
   const gladys = fakeGladys(CONFIG);
   const runtime = createRuntime(gladys, {
     listDatastores: () => Promise.resolve([{ store: 'one' }, { store: 'two' }]),
@@ -199,6 +199,8 @@ test('the test_connection action reports the datastore count in both languages',
   assert.deepEqual(await runtime.testConnection(), {
     en: 'Connection successful: 2 datastore(s) found.',
     fr: 'Connexion réussie : 2 datastore(s) trouvé(s).',
+    de: 'Verbindung erfolgreich: 2 Datastore(s) gefunden.',
+    es: 'Conexión correcta: 2 datastore(s) encontrado(s).',
   });
 });
 
@@ -439,6 +441,26 @@ test('get_backup_report counts problems and lists unreachable datastores', async
       'off : PBS injoignable',
     ].join('\n'),
   );
+  assert.equal(
+    (await runtime.getBackupReport({ language: 'de' })).summary,
+    [
+      'PBS-Sicherungen: bitte prüfen',
+      'one: OK (50 % belegt)',
+      'two: keine Sicherung (95 % belegt)',
+      'off: PBS nicht erreichbar',
+    ].join('\n'),
+  );
+  assert.equal(
+    (await runtime.getBackupReport({ language: 'es' })).summary,
+    [
+      'Copias de seguridad PBS: requieren atención',
+      'one: OK (50 % usado)',
+      'two: ninguna copia de seguridad (95 % usado)',
+      'off: PBS inaccesible',
+    ].join('\n'),
+  );
+  // A language the report is not written in falls back to English.
+  assert.match((await runtime.getBackupReport({ language: 'it' })).summary, /^PBS backups: /);
 });
 
 test('both widgets resolve content the Gladys core renders as sent', async () => {
@@ -503,11 +525,18 @@ test('widget refresh buttons read PBS again and answer with a toast', async () =
   await runtime.datastoreWidget({ settings: { datastore: DEVICE } });
   assert.deepEqual(
     await runtime.refreshDatastoreWidget('refresh', {}, { settings: { datastore: DEVICE } }),
-    { en: 'Datastore refreshed', fr: 'Datastore actualisé' },
+    {
+      en: 'Datastore refreshed',
+      fr: 'Datastore actualisé',
+      de: 'Datastore aktualisiert',
+      es: 'Datastore actualizado',
+    },
   );
   assert.deepEqual(await runtime.refreshOverviewWidget(), {
     en: 'Datastores refreshed',
     fr: 'Datastores actualisés',
+    de: 'Datastores aktualisiert',
+    es: 'Datastores actualizados',
   });
   assert.equal(reads, 3);
   assert.equal(gladys.calls.states.length, 3);
@@ -537,6 +566,9 @@ test('the connection status follows the polls after a failed start', async () =>
   const last = gladys.calls.connectionStatus.at(-1);
   assert.equal(last.connected, false);
   assert.match(last.message.fr, /injoignable : timed out/);
+  // A plain error has no translation: every language falls back to its text.
+  assert.match(last.message.de, /nicht erreichbar: timed out/);
+  assert.match(last.message.es, /inaccesible: timed out/);
 
   const reported = gladys.calls.connectionStatus.length;
   await assert.rejects(runtime.poll({ external_id: DEVICE }), /timed out/);

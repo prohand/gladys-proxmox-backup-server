@@ -209,6 +209,8 @@ export class DatastoreMissingError extends Error {
     this.messages = {
       en: this.message,
       fr: `Le datastore ${store} n'existe plus sur le Proxmox Backup Server`,
+      de: `Der Datastore ${store} existiert auf dem Proxmox Backup Server nicht mehr`,
+      es: `El datastore ${store} ya no existe en el Proxmox Backup Server`,
     };
   }
 }
