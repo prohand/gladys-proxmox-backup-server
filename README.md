@@ -18,7 +18,7 @@ With Gladys 5.1.0 or later, the integration also offers (all read-only):
 - five scene triggers: maintenance task finished, new backup, backup stale, PBS unreachable, PBS reachable again;
 - two scene actions: get a datastore status, and get a backup report with a ready-to-send text.
 
-See [the English setup guide](docs/en.md) or [le guide en français](docs/fr.md) for the complete feature reference and the exact least-privilege ACL commands.
+See [the English setup guide](docs/en.md), [le guide en français](docs/fr.md), [die deutsche Anleitung](docs/de.md) or [la guía en español](docs/es.md) for the complete feature reference and the exact least-privilege ACL commands.
 
 ## Development
 

@@ -40,8 +40,9 @@ Run all three locally before pushing; formatting is a hard CI gate.
 | `src/runtime.js`                    | `createRuntime()` (injected I/O): discovery, throttled polls, the summary cache, scene events, widget and scene-action handlers; `registerRuntime()` wires them to the SDK.            |
 | `src/scenes.js`                     | Scene trigger/action keys, `detectSceneEvents` (previous vs current summary), reachability events, scene action outputs.                                                               |
 | `src/widgets.js`                    | Dashboard widget keys and content builders (`datastoreWidgetContent`, `overviewWidgetContent`) in the core widget vocabulary.                                                          |
-| `gladys-assistant-integration.json` | Manifest: version, `docker_image`, bilingual `config_schema`, actions. Version and image tag are bumped **only** by `release.yml`.                                                     |
-| `docs/en.md`, `docs/fr.md`          | User-facing setup guides — kept in sync, both languages.                                                                                                                               |
+| `src/i18n.js`                       | `LANGUAGES` (en, fr, de, es), `pickLanguage()` (anything else → en), `eachLanguage()` to build a `{ en, fr, de, es }` text.                                                            |
+| `gladys-assistant-integration.json` | Manifest: version, `docker_image`, `{ en, fr, de, es }` `config_schema`, actions. Version and image tag are bumped **only** by `release.yml`.                                          |
+| `docs/{en,fr,de,es}.md`             | User-facing setup guides — `docs/en.md`, `docs/fr.md`, `docs/de.md`, `docs/es.md` stay in sync.                                                                                        |
 | `test/`                             | One `*.test.js` per source file, plus `manifest.test.js` which asserts manifest invariants.                                                                                            |
 
 ## Conventions
@@ -52,9 +53,12 @@ Run all three locally before pushing; formatting is a hard CI gate.
   are deliberate choices.
 - Prettier owns formatting (100 cols, single quotes, trailing commas); ESLint only catches
   real mistakes. Never fight Prettier with manual wrapping.
-- Everything user-visible is bilingual **en + fr**: manifest labels/descriptions, action
-  results, connection-status messages, and the two docs files. A change that touches one
-  language must touch the other.
+- User-facing text is `{ en, fr, de, es }` (`LANGUAGES` in `src/i18n.js`): manifest
+  labels/descriptions, action results, connection-status messages, widget texts, the report
+  text. `docs/en.md`, `docs/fr.md`, `docs/de.md`, `docs/es.md` stay in sync. A change that
+  touches one language must touch the others. One exception: the error a failed
+  `test_connection` THROWS reaches Gladys as one string, `en / fr` only (the user's choice).
+  German informal register: "du", like the Gladys front.
 - Business logic lives in pure, exported functions taking explicit `now`/`dateFormat`
   arguments, and `createRuntime()` takes its I/O as injected dependencies, so tests need
   neither a clock, a network, nor a Gladys instance. Keep `index.js` thin.
@@ -75,9 +79,9 @@ every datastore, forever.
 
 `ProxmoxClient.request` bounds the WHOLE exchange (`REQUEST_TIMEOUT_MS`), caps the body
 (`MAX_RESPONSE_BYTES`), rejects on a response cut mid-way, and throws a typed `ProxmoxError`
-(`kind`: config, auth, permission, tls, network, timeout, http, parse) carrying an `{ en, fr }`
-message. An optional SHA-256 `tls_fingerprint` is checked on the TLS socket before the request
-is written, so the token never reaches a certificate that does not match.
+(`kind`: config, auth, permission, tls, network, timeout, http, parse) carrying an
+`{ en, fr, de, es }` message. An optional SHA-256 `tls_fingerprint` is checked on the TLS socket
+before the request is written, so the token never reaches a certificate that does not match.
 
 ## Polling model
 

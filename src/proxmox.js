@@ -39,7 +39,7 @@ export const MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 /**
  * An error raised while talking to the PBS API. `kind` is what the code acts
  * on ('config' | 'auth' | 'permission' | 'tls' | 'network' | 'timeout' |
- * 'http' | 'parse'), `messages` is what the user reads, in both languages.
+ * 'http' | 'parse'), `messages` is what the user reads, in every language (src/i18n.js).
  */
 export class ProxmoxError extends Error {
   constructor(kind, messages, { status, path } = {}) {
@@ -81,6 +81,8 @@ function httpError(status, path, body) {
       {
         en: 'PBS refused the API token (HTTP 401): check the token ID and its secret.',
         fr: "PBS a refusé le jeton API (HTTP 401) : vérifiez l'identifiant du jeton et son secret.",
+        de: 'PBS hat das API-Token abgelehnt (HTTP 401): Prüfe die Token-ID und ihr Secret.',
+        es: 'PBS ha rechazado el token de API (HTTP 401): compruebe el ID del token y su secreto.',
       },
       { status, path },
     );
@@ -90,6 +92,8 @@ function httpError(status, path, body) {
       {
         en: `PBS refused access to ${path} (HTTP 403): the token is missing the DatastoreAudit or Audit role (see the documentation).`,
         fr: `PBS a refusé l'accès à ${path} (HTTP 403) : il manque au jeton le rôle DatastoreAudit ou Audit (voir la documentation).`,
+        de: `PBS hat den Zugriff auf ${path} verweigert (HTTP 403): Dem Token fehlt die Rolle DatastoreAudit oder Audit (siehe Dokumentation).`,
+        es: `PBS ha denegado el acceso a ${path} (HTTP 403): al token le falta el rol DatastoreAudit o Audit (consulte la documentación).`,
       },
       { status, path },
     );
@@ -101,6 +105,8 @@ function httpError(status, path, body) {
     {
       en: `PBS answered HTTP ${status} on ${path}. ${excerpt}`.trim(),
       fr: `PBS a répondu HTTP ${status} sur ${path}. ${excerpt}`.trim(),
+      de: `PBS hat auf ${path} mit HTTP ${status} geantwortet. ${excerpt}`.trim(),
+      es: `PBS ha respondido HTTP ${status} en ${path}. ${excerpt}`.trim(),
     },
     { status, path },
   );
@@ -138,6 +144,8 @@ function transportError(url, path, error) {
       {
         en: `PBS presents a certificate this container does not trust (${code}): pin its SHA-256 fingerprint in the configuration (or turn TLS verification off on a trusted network).`,
         fr: `PBS présente un certificat auquel ce conteneur ne fait pas confiance (${code}) : épinglez son empreinte SHA-256 dans la configuration (ou désactivez la vérification TLS sur un réseau de confiance).`,
+        de: `PBS legt ein Zertifikat vor, dem dieser Container nicht vertraut (${code}): Hinterlege seinen SHA-256-Fingerabdruck in der Konfiguration (oder deaktiviere die TLS-Prüfung in einem vertrauenswürdigen Netzwerk).`,
+        es: `PBS presenta un certificado en el que este contenedor no confía (${code}): fije su huella SHA-256 en la configuración (o desactive la verificación TLS en una red de confianza).`,
       },
       { path },
     );
@@ -147,6 +155,8 @@ function transportError(url, path, error) {
       {
         en: `Cannot resolve the host name ${url.hostname} (${code}): check the server URL.`,
         fr: `Impossible de résoudre le nom d'hôte ${url.hostname} (${code}) : vérifiez l'URL du serveur.`,
+        de: `Der Hostname ${url.hostname} kann nicht aufgelöst werden (${code}): Prüfe die Server-URL.`,
+        es: `No se puede resolver el nombre de host ${url.hostname} (${code}): compruebe la URL del servidor.`,
       },
       { path },
     );
@@ -156,6 +166,8 @@ function transportError(url, path, error) {
       {
         en: `${target} refused the connection (ECONNREFUSED): check the port, PBS listens on 8007 by default.`,
         fr: `${target} a refusé la connexion (ECONNREFUSED) : vérifiez le port, PBS écoute sur 8007 par défaut.`,
+        de: `${target} hat die Verbindung abgelehnt (ECONNREFUSED): Prüfe den Port, PBS lauscht standardmäßig auf 8007.`,
+        es: `${target} ha rechazado la conexión (ECONNREFUSED): compruebe el puerto, PBS escucha en el 8007 de forma predeterminada.`,
       },
       { path },
     );
@@ -165,6 +177,8 @@ function transportError(url, path, error) {
       {
         en: `${target} is unreachable (${code}): check that the server is up and reachable from Gladys.`,
         fr: `${target} est injoignable (${code}) : vérifiez que le serveur est démarré et accessible depuis Gladys.`,
+        de: `${target} ist nicht erreichbar (${code}): Prüfe, ob der Server läuft und von Gladys aus erreichbar ist.`,
+        es: `${target} no es accesible (${code}): compruebe que el servidor está en marcha y es accesible desde Gladys.`,
       },
       { path },
     );
@@ -173,13 +187,15 @@ function transportError(url, path, error) {
     {
       en: `Cannot reach ${target} (${code}).`,
       fr: `Impossible de joindre ${target} (${code}).`,
+      de: `${target} kann nicht erreicht werden (${code}).`,
+      es: `No se puede contactar con ${target} (${code}).`,
     },
     { path },
   );
 }
 
-function configError(en, fr) {
-  return new ProxmoxError('config', { en, fr });
+function configError(messages) {
+  return new ProxmoxError('config', messages);
 }
 
 /**
@@ -217,6 +233,8 @@ function pinnedConnection(url, fingerprint, path, onSocket) {
             {
               en: `The certificate presented by PBS does not match the pinned fingerprint (server: ${presented ?? 'none'}). The token was not sent.`,
               fr: `Le certificat présenté par PBS ne correspond pas à l'empreinte épinglée (serveur : ${presented ?? 'aucune'}). Le jeton n'a pas été envoyé.`,
+              de: `Das von PBS vorgelegte Zertifikat entspricht nicht dem hinterlegten Fingerabdruck (Server: ${presented ?? 'keiner'}). Das Token wurde nicht gesendet.`,
+              es: `El certificado presentado por PBS no coincide con la huella fijada (servidor: ${presented ?? 'ninguna'}). El token no se ha enviado.`,
             },
             { path },
           ),
@@ -247,24 +265,30 @@ export class ProxmoxClient {
   async request(path, params = {}) {
     const { base_url: baseUrl, api_token_id: tokenId, api_token_secret: secret } = this.config;
     if (!baseUrl || !tokenId || !secret)
-      throw configError(
-        'PBS connection is not configured: fill in the server URL, the token ID and its secret.',
-        'La connexion à PBS n’est pas configurée : renseignez l’URL du serveur, l’identifiant du jeton et son secret.',
-      );
+      throw configError({
+        en: 'PBS connection is not configured: fill in the server URL, the token ID and its secret.',
+        fr: 'La connexion à PBS n’est pas configurée : renseignez l’URL du serveur, l’identifiant du jeton et son secret.',
+        de: 'Die Verbindung zu PBS ist nicht konfiguriert: Gib die Server-URL, die Token-ID und ihr Secret ein.',
+        es: 'La conexión con PBS no está configurada: indique la URL del servidor, el ID del token y su secreto.',
+      });
     let url;
     try {
       url = new URL(`/api2/json${path}`, baseUrl);
     } catch {
-      throw configError(
-        `The server URL is not valid: ${baseUrl}`,
-        `L'URL du serveur n'est pas valide : ${baseUrl}`,
-      );
+      throw configError({
+        en: `The server URL is not valid: ${baseUrl}`,
+        fr: `L'URL du serveur n'est pas valide : ${baseUrl}`,
+        de: `Die Server-URL ist ungültig: ${baseUrl}`,
+        es: `La URL del servidor no es válida: ${baseUrl}`,
+      });
     }
     if (url.protocol !== 'https:' && url.protocol !== 'http:')
-      throw configError(
-        'The server URL must start with https:// (or http://).',
-        "L'URL du serveur doit commencer par https:// (ou http://).",
-      );
+      throw configError({
+        en: 'The server URL must start with https:// (or http://).',
+        fr: "L'URL du serveur doit commencer par https:// (ou http://).",
+        de: 'Die Server-URL muss mit https:// (oder http://) beginnen.',
+        es: 'La URL del servidor debe empezar por https:// (o http://).',
+      });
     for (const [key, value] of Object.entries(params))
       if (value !== undefined) url.searchParams.set(key, String(value));
 
@@ -273,15 +297,19 @@ export class ProxmoxClient {
     if (tlsMode.mode === 'fingerprint') {
       // Pinning over plain HTTP would look safe while sending the token in clear.
       if (!isHttps)
-        throw configError(
-          'A certificate fingerprint is pinned but the server URL uses http://: use https://.',
-          "Une empreinte de certificat est épinglée mais l'URL du serveur utilise http:// : utilisez https://.",
-        );
+        throw configError({
+          en: 'A certificate fingerprint is pinned but the server URL uses http://: use https://.',
+          fr: "Une empreinte de certificat est épinglée mais l'URL du serveur utilise http:// : utilisez https://.",
+          de: 'Ein Zertifikat-Fingerabdruck ist hinterlegt, aber die Server-URL verwendet http://: Verwende https://.',
+          es: 'Hay una huella de certificado fijada, pero la URL del servidor usa http://: use https://.',
+        });
       if (tlsMode.fingerprint.length !== 64)
-        throw configError(
-          'The certificate fingerprint must be a SHA-256 fingerprint (64 hexadecimal characters).',
-          "L'empreinte du certificat doit être une empreinte SHA-256 (64 caractères hexadécimaux).",
-        );
+        throw configError({
+          en: 'The certificate fingerprint must be a SHA-256 fingerprint (64 hexadecimal characters).',
+          fr: "L'empreinte du certificat doit être une empreinte SHA-256 (64 caractères hexadécimaux).",
+          de: 'Der Zertifikat-Fingerabdruck muss ein SHA-256-Fingerabdruck sein (64 Hexadezimalzeichen).',
+          es: 'La huella del certificado debe ser una huella SHA-256 (64 caracteres hexadecimales).',
+        });
     }
 
     return new Promise((resolve, reject) => {
@@ -306,6 +334,8 @@ export class ProxmoxClient {
               {
                 en: `PBS did not answer ${path} within ${this.timeoutMs / 1000} s.`,
                 fr: `PBS n'a pas répondu à ${path} en moins de ${this.timeoutMs / 1000} s.`,
+                de: `PBS hat auf ${path} nicht innerhalb von ${this.timeoutMs / 1000} s geantwortet.`,
+                es: `PBS no ha respondido a ${path} en menos de ${this.timeoutMs / 1000} s.`,
               },
               { path },
             ),
@@ -318,6 +348,8 @@ export class ProxmoxClient {
           {
             en: `The PBS answer on ${path} was interrupted.`,
             fr: `La réponse de PBS sur ${path} a été interrompue.`,
+            de: `Die Antwort von PBS auf ${path} wurde unterbrochen.`,
+            es: `La respuesta de PBS en ${path} se ha interrumpido.`,
           },
           { path },
         );
@@ -353,6 +385,8 @@ export class ProxmoxClient {
                   {
                     en: `The PBS answer on ${path} exceeded ${this.maxResponseBytes / 1024 / 1024} MB.`,
                     fr: `La réponse de PBS sur ${path} dépasse ${this.maxResponseBytes / 1024 / 1024} Mo.`,
+                    de: `Die Antwort von PBS auf ${path} überschreitet ${this.maxResponseBytes / 1024 / 1024} MB.`,
+                    es: `La respuesta de PBS en ${path} supera los ${this.maxResponseBytes / 1024 / 1024} MB.`,
                   },
                   { path },
                 ),
@@ -379,6 +413,8 @@ export class ProxmoxClient {
                   {
                     en: `The PBS answer on ${path} is not valid JSON.`,
                     fr: `La réponse de PBS sur ${path} n'est pas du JSON valide.`,
+                    de: `Die Antwort von PBS auf ${path} ist kein gültiges JSON.`,
+                    es: `La respuesta de PBS en ${path} no es un JSON válido.`,
                   },
                   { status, path },
                 ),

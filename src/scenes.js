@@ -1,3 +1,5 @@
+import { pickLanguage } from './i18n.js';
+
 // Scene triggers and scene actions declared in the manifest (Gladys 5.1). The
 // triggers are events: each one fires once per transition seen between two
 // scheduled refreshes, never once per refresh. The actions only read what the
@@ -17,9 +19,64 @@ export const SCENE_ACTIONS = {
 };
 
 const TASK_LABELS = {
-  verify: { en: 'verify', fr: 'vérification' },
-  gc: { en: 'garbage collection', fr: 'garbage collection' },
-  prune: { en: 'prune', fr: 'prune' },
+  verify: { en: 'verify', fr: 'vérification', de: 'Verifizierung', es: 'verificación' },
+  gc: {
+    en: 'garbage collection',
+    fr: 'garbage collection',
+    de: 'Garbage Collection',
+    es: 'garbage collection',
+  },
+  prune: { en: 'prune', fr: 'prune', de: 'Prune', es: 'prune' },
+};
+
+// The words of the `get_backup_report` text, per report language. Only French
+// puts a space before the colon; only English writes the percent sign without
+// one.
+const REPORT_TEXTS = {
+  en: {
+    colon: ': ',
+    title: 'PBS backups',
+    needsAttention: 'needs attention',
+    lastBackup: (hours) => `last backup ${hours} h ago`,
+    noBackup: 'no backup',
+    taskFailed: (task) => `${task} failed`,
+    used: (percent) => `${percent}% used`,
+    capacityUnknown: 'capacity unknown',
+    unreachable: 'PBS unreachable',
+  },
+  fr: {
+    colon: ' : ',
+    title: 'Sauvegardes PBS',
+    needsAttention: 'à vérifier',
+    lastBackup: (hours) => `dernière sauvegarde il y a ${hours} h`,
+    noBackup: 'aucune sauvegarde',
+    taskFailed: (task) => `échec ${task}`,
+    used: (percent) => `utilisé ${percent} %`,
+    capacityUnknown: 'capacité inconnue',
+    unreachable: 'PBS injoignable',
+  },
+  de: {
+    colon: ': ',
+    title: 'PBS-Sicherungen',
+    needsAttention: 'bitte prüfen',
+    lastBackup: (hours) => `letzte Sicherung vor ${hours} h`,
+    noBackup: 'keine Sicherung',
+    taskFailed: (task) => `${task} fehlgeschlagen`,
+    used: (percent) => `${percent} % belegt`,
+    capacityUnknown: 'Kapazität unbekannt',
+    unreachable: 'PBS nicht erreichbar',
+  },
+  es: {
+    colon: ': ',
+    title: 'Copias de seguridad PBS',
+    needsAttention: 'requieren atención',
+    lastBackup: (hours) => `última copia hace ${hours} h`,
+    noBackup: 'ninguna copia de seguridad',
+    taskFailed: (task) => `fallo de ${task}`,
+    used: (percent) => `${percent} % usado`,
+    capacityUnknown: 'capacidad desconocida',
+    unreachable: 'PBS inaccesible',
+  },
 };
 
 // A published event is capped at 1000 characters per string by the core.
@@ -122,47 +179,38 @@ function failedTasks(summary) {
 }
 
 function reportLine(summary, language) {
-  const fr = language === 'fr';
+  const text = REPORT_TEXTS[language];
   const problems = [];
   if (summary.stale)
     problems.push(
       summary.newestBackupEpoch
-        ? fr
-          ? `dernière sauvegarde il y a ${Math.round(summary.hoursSinceBackup)} h`
-          : `last backup ${Math.round(summary.hoursSinceBackup)} h ago`
-        : fr
-          ? 'aucune sauvegarde'
-          : 'no backup',
+        ? text.lastBackup(Math.round(summary.hoursSinceBackup))
+        : text.noBackup,
     );
   for (const type of failedTasks(summary))
-    problems.push(fr ? `échec ${TASK_LABELS[type].fr}` : `${TASK_LABELS[type].en} failed`);
+    problems.push(text.taskFailed(TASK_LABELS[type][language]));
   const state = problems.length ? problems.join(', ') : 'OK';
   // Null while the datastore is offline or unmounted: said, not shown as 0 %.
-  const known = Number.isFinite(summary.usagePercent);
-  const usage = known
-    ? fr
-      ? `utilisé ${summary.usagePercent} %`
-      : `${summary.usagePercent}% used`
-    : fr
-      ? 'capacité inconnue'
-      : 'capacity unknown';
-  return `${summary.store}${fr ? ' : ' : ': '}${state} (${usage})`;
+  const usage = Number.isFinite(summary.usagePercent)
+    ? text.used(summary.usagePercent)
+    : text.capacityUnknown;
+  return `${summary.store}${text.colon}${state} (${usage})`;
 }
 
 /**
  * Outputs of the `get_backup_report` scene action: counters a scene can test,
  * and a ready-to-send text, one line per datastore. `failures` maps a store
- * name to the error of a refresh that could not reach PBS.
+ * name to the error of a refresh that could not reach PBS. `language` is one
+ * of en, fr, de, es; any other value writes the text in English.
  */
 export function backupReportOutputs(summaries, failures = new Map(), language = 'en') {
-  const fr = language === 'fr';
+  const lang = pickLanguage(language);
+  const text = REPORT_TEXTS[lang];
   const staleCount = summaries.filter((summary) => summary.stale).length;
   const failedTaskCount = summaries.reduce((total, item) => total + failedTasks(item).length, 0);
-  const lines = summaries.map((summary) => reportLine(summary, language));
-  for (const store of failures.keys())
-    lines.push(fr ? `${store} : PBS injoignable` : `${store}: PBS unreachable`);
+  const lines = summaries.map((summary) => reportLine(summary, lang));
+  for (const store of failures.keys()) lines.push(`${store}${text.colon}${text.unreachable}`);
   const allOk = staleCount === 0 && failedTaskCount === 0 && failures.size === 0;
-  const title = fr ? 'Sauvegardes PBS' : 'PBS backups';
   return {
     datastore_count: summaries.length + failures.size,
     stale_count: staleCount,
@@ -175,10 +223,7 @@ export function backupReportOutputs(summaries, failures = new Map(), language = 
         .filter((percent) => Number.isFinite(percent)),
     ),
     all_ok: allOk,
-    summary: [
-      `${title}${fr ? ' : ' : ': '}${allOk ? 'OK' : fr ? 'à vérifier' : 'needs attention'}`,
-      ...lines,
-    ]
+    summary: [`${text.title}${text.colon}${allOk ? 'OK' : text.needsAttention}`, ...lines]
       .join('\n')
       .slice(0, 10_000),
   };
