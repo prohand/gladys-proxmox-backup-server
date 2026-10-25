@@ -66,9 +66,9 @@ async function readManifest() {
   );
 }
 
-test('widgets, scene triggers, and scene actions need Gladys 5.1', async () => {
+test('widgets, scene triggers, and scene actions need Gladys 5.1 (keywords: 5.3)', async () => {
   const manifest = await readManifest();
-  assert.equal(manifest.gladys_version, '>=5.1.0');
+  assert.equal(manifest.gladys_version, '>=5.3.0');
   assert.deepEqual(
     manifest.widgets.map(({ key }) => key),
     Object.values(WIDGETS),
@@ -191,4 +191,58 @@ test('the manifest declares the transports used (the PBS API is read on the loca
     await readFile(new URL('../gladys-assistant-integration.json', import.meta.url)),
   );
   assert.deepEqual(manifest.transports, ['local']);
+});
+
+// The store's catalog shelves, with the four added in 2026-10. An unknown key is
+// only dropped with a warning: a typo would silently cost a shelf.
+const CATALOG_CATEGORIES = [
+  'climate',
+  'lighting',
+  'energy',
+  'security',
+  'multimedia',
+  'appliances',
+  'environment',
+  'protocols',
+  'network',
+  'notifications',
+  'assistants',
+  'services',
+  'transport',
+  'vehicles',
+  'servers',
+  'leisure',
+];
+
+test('categories are 1 to 3 unique keys of the store vocabulary, servers first', async () => {
+  const { categories } = await readManifest();
+  assert.ok(categories.length >= 1 && categories.length <= 3);
+  assert.equal(new Set(categories).size, categories.length);
+  for (const category of categories) assert.ok(CATALOG_CATEGORIES.includes(category), category);
+  assert.equal(categories[0], 'servers');
+});
+
+test('keywords are 1 to 10 unique search terms of 2 to 30 characters', async () => {
+  const { keywords } = await readManifest();
+  assert.ok(Array.isArray(keywords));
+  assert.ok(keywords.length >= 1 && keywords.length <= 10);
+  const normalized = keywords.map((keyword) => keyword.trim().toLowerCase());
+  assert.equal(new Set(normalized).size, normalized.length, 'keywords must be unique');
+  for (const keyword of normalized)
+    assert.ok(keyword.length >= 2 && keyword.length <= 30, `keyword "${keyword}"`);
+});
+
+test('PBS runs worldwide: no countries restriction', async () => {
+  assert.equal((await readManifest()).countries, undefined);
+});
+
+test('keywords, countries and music require Gladys >= 5.3.0', async () => {
+  const manifest = await readManifest();
+  const declared = ['keywords', 'countries', 'music'].filter((f) => manifest[f] !== undefined);
+  assert.ok(declared.length > 0);
+  const [major, minor] = manifest.gladys_version
+    .match(/>=\s*(\d+)\.(\d+)/)
+    .slice(1)
+    .map(Number);
+  assert.ok(major > 5 || (major === 5 && minor >= 3), manifest.gladys_version);
 });

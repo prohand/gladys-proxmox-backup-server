@@ -2,6 +2,8 @@
 
 Cette intégration interroge uniquement les routes `GET` de l'API PBS. Elle ne lance, ne modifie et ne supprime aucun backup ou job.
 
+Nécessite **Gladys 5.3.0** ou plus récent.
+
 ## Droits exacts (lecture seule)
 
 Le rôle intégré **`DatastoreAudit`** contient `Datastore.Audit` : métriques, configuration et liste du contenu, sans accès aux données sauvegardées. Le rôle intégré **`Audit`** sur `/system` fournit `Sys.Audit`, nécessaire pour lire l'historique des tâches du nœud. N'accordez surtout pas `DatastoreAdmin`, `DatastoreBackup`, `DatastorePowerUser`, `Datastore.Prune`, `Datastore.Modify` ou `Datastore.Verify`.

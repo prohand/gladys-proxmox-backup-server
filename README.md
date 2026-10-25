@@ -2,6 +2,8 @@
 
 External Gladys Assistant integration for **read-only monitoring** of Proxmox Backup Server (PBS). It creates one Gladys device per datastore and reports capacity, snapshot inventory, maintenance-task status, and backup freshness.
 
+Requires Gladys 5.3.0 or later (manifest `gladys_version: ">=5.3.0"`).
+
 ## Monitored values
 
 - datastore usage percentage, total size, and used space, rounded to two decimal places;
