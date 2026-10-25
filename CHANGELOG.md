@@ -6,6 +6,8 @@ All notable changes to this integration are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-10-25
+
 ### Added
 
 - Store catalog: the integration now also sits on the new "servers" shelf, and declares search
@@ -217,7 +219,8 @@ All notable changes to this integration are documented here. The format follows
 - Verify, garbage collection and prune status and date published as separate features.
 - Refresh interval clamped to database-safe limits.
 
-[Unreleased]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.6.1...HEAD
+[Unreleased]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.7.0...HEAD
+[2.7.0]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.6.1...v2.7.0
 [2.6.1]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.5.1...v2.6.0
 [2.5.1]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.5.0...v2.5.1
