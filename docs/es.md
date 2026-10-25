@@ -2,6 +2,8 @@
 
 Esta integración solo llama a rutas `GET` de la API de PBS. No puede iniciar, modificar, depurar (prune) ni eliminar copias de seguridad ni trabajos.
 
+Requiere **Gladys 5.3.0** o posterior.
+
 ## Permisos exactos de solo lectura
 
 Conceda el rol integrado `DatastoreAudit` (`Datastore.Audit`) sobre `/datastore`, y el rol integrado `Audit` (`Sys.Audit`) sobre `/system` para que se pueda leer el historial de tareas. No conceda ningún rol de escritura, copia de seguridad, prune, verificación o administración sobre los datastores.

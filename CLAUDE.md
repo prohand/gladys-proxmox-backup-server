@@ -97,8 +97,8 @@ exponential backoff before reporting a disconnected status.
 
 ## Widgets and scenes (Gladys 5.1)
 
-The manifest declares `widgets`, `scene_triggers`, and `scene_actions`, hence `gladys_version: >=5.1.0`
-(an older core rejects the manifest). Rules to keep:
+The manifest declares `widgets`, `scene_triggers`, and `scene_actions`, which need `gladys_version: >=5.1.0`
+(an older core rejects the manifest); its catalog `keywords` push the floor to `>=5.3.0`. Rules to keep:
 
 - **Keys are forever**: a widget, trigger, action, field, variable, or output key is stored by users'
   dashboards and scenes. Add, never rename; a new `required` action field needs a `default`.

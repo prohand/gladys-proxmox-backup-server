@@ -2,6 +2,8 @@
 
 This integration only calls PBS API `GET` routes. It cannot start, alter, prune, or delete backups or jobs.
 
+Requires **Gladys 5.3.0** or later.
+
 ## Exact read-only permissions
 
 Grant the built-in `DatastoreAudit` role (`Datastore.Audit`) on `/datastore`, and the built-in `Audit` role (`Sys.Audit`) on `/system` so the task history can be read. Do not grant any datastore write, backup, prune, verify, or admin role.
