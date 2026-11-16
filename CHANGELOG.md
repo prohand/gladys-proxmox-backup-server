@@ -6,6 +6,10 @@ All notable changes to this integration are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.7.3] - 2026-11-16
+
+- Maintenance release, no functional change.
+
 ## [2.7.2] - 2026-11-16
 
 - Update `@gladysassistant/integration-sdk` to 0.16.1 (security update).
@@ -227,7 +231,8 @@ All notable changes to this integration are documented here. The format follows
 - Verify, garbage collection and prune status and date published as separate features.
 - Refresh interval clamped to database-safe limits.
 
-[Unreleased]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.7.2...HEAD
+[Unreleased]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.7.3...HEAD
+[2.7.3]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.7.2...v2.7.3
 [2.7.2]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.7.1...v2.7.2
 [2.7.1]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.7.0...v2.7.1
 [2.7.0]: https://github.com/prohand/gladys-proxmox-backup-server/compare/v2.6.1...v2.7.0
